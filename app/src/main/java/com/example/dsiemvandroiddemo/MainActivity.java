@@ -1,0 +1,505 @@
+package com.example.dsiemvandroiddemo;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.datacap.android.BluetoothConnectionResponseListener;
+import com.datacap.android.DSIEMVAndroid;
+import com.datacap.android.ProcessTransactionMessageListener;
+import com.datacap.android.ProcessTransactionResponseListener;
+
+import android.Manifest;
+import android.annotation.TargetApi;
+import android.app.Dialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.simpleframework.xml.Serializer;
+import org.simpleframework.xml.core.Persister;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+
+import static android.widget.Toast.*;
+import static com.example.dsiemvandroiddemo.R.id.selectDevice;
+import static com.example.dsiemvandroiddemo.R.id.saleButton;
+import static com.example.dsiemvandroiddemo.R.id.returnButton;
+import static com.example.dsiemvandroiddemo.R.id.cancelButton;
+import static com.example.dsiemvandroiddemo.R.id.getDevicesInfoButton;
+import static com.example.dsiemvandroiddemo.R.id.amountText;
+import static com.example.dsiemvandroiddemo.R.id.merchantIDText;
+import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
+    private static final int PERMISSION_REQUEST_BACKGROUND_LOCATION = 2;
+    private static final int REQUEST_ENABLE_BT = 3;
+    private BluetoothAdapter mBtAdapter;
+    private DialogInterface.OnClickListener mBluetoothSelection;
+    private String mConnectedBluetoothDevice = "";
+    private int mNamePos = 0;
+    private String[] mDeviceList = {"", "", "", "", "", ""};
+    private AlertDialog mBTdialog;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        //check for bluetooth and location permissions for bluetooth LE to work.
+        // the user must agree to location sharing because locations is part of bluetooth LE spec.
+        hasPermissions();
+        try {
+            //sets up local endpoint to be used with EMV US Test Client
+            LocalListener li = new LocalListener(MainActivity.this);
+        } catch (Exception ex){
+            //could not start the local server listener
+        }
+        //setup BT dialog click action
+        mBluetoothSelection = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                ListView lv = ((AlertDialog) dialog).getListView();
+                TextView v = (TextView) lv.getChildAt(which);
+                String tempName = v.getText().toString();
+                if (!tempName.equals("")) {
+                    if (mConnectedBluetoothDevice.equals(tempName)) {
+                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
+                        nodt.setText("Connecting to Device...");
+                        TextView transMessageView = findViewById(R.id.transMessage);
+                        transMessageView.setText("Connecting to Device...");
+                        //run the establish bluetooth connection to get the initial connection to the bluetooth device.
+                        //limited to one bluetooth device per instance of the DSIEMVAndroid control.
+                        //run in a separate thread to not block the UI.
+                        new Thread(new Runnable() {
+                            public void run() {
+                                DSIEMVAndroidInstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedBluetoothDevice);
+                            }
+                        }).start();
+
+                    } else {
+                        mConnectedBluetoothDevice = tempName;
+                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
+                        nodt.setText("Connecting to Device...");
+                        TextView transMessageView = findViewById(R.id.transMessage);
+                        transMessageView.setText("Connecting to Device...");
+                        new Thread(new Runnable() {
+                            public void run() {
+                                DSIEMVAndroidInstance.getInstance(MainActivity.this).Disconnect();
+                                DSIEMVAndroidInstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedBluetoothDevice);
+                            }
+                        }).start();
+
+                    }
+                }
+            }
+        };
+        //Alert dialog for selecting BT devices
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Choose a Bluetooth Device" + System.lineSeparator() + "Searching...");
+        builder.setItems(mDeviceList, mBluetoothSelection);
+        mBTdialog = builder.create();
+
+        //button click listener for selecting device, brings up alert dialog
+        Button btn = (Button) findViewById(selectDevice);
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //does a local search for BT devices in discovery mode
+                searchForBt();
+
+                mBTdialog.show();
+            }
+        });
+
+        Button salebtn = (Button) findViewById(saleButton);
+        salebtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transMessageView.setText("Starting Sale");
+                TextView transactionresponseText = findViewById(R.id.transResposne);
+                transactionresponseText.setText("Running Sale");
+                TextView merchIDtv = (TextView) findViewById(merchantIDText);
+                final String merchID = merchIDtv.getText().toString();
+                TextView amounttv = (TextView) findViewById(amountText);
+                final String amount = amounttv.getText().toString();
+                new Thread(new Runnable() {
+                    public void run() {
+                        //generates xml for running a sale
+                        String xmlRequest = setupSale(amount, merchID);
+                        //runs the sale to the connected BT device, this does not have to be a singleton.
+                        // It was used as a singleton here to support transactions through the local listener server.
+                        DSIEMVAndroidInstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                    }
+
+                }).start();
+            }
+        });
+
+        Button returnbtn = (Button) findViewById(returnButton);
+        returnbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transMessageView.setText("Starting Return");
+                TextView transactionresponseText = findViewById(R.id.transResposne);
+                transactionresponseText.setText("Running Return");
+                TextView merchIDtv = (TextView) findViewById(merchantIDText);
+                final String merchID = merchIDtv.getText().toString();
+                TextView amounttv = (TextView) findViewById(amountText);
+                final String amount = amounttv.getText().toString();
+                new Thread(new Runnable() {
+                    public void run() {
+                        //generates xml for running a sale
+                        String xmlRequest = setupReturn(amount, merchID);
+                        //runs the sale to the connected BT device
+                        DSIEMVAndroidInstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+
+                    }
+
+                }).start();
+            }
+        });
+        Button cancelbtn = (Button) findViewById(cancelButton);
+        cancelbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transMessageView.setText("Canceled Transaction");
+                TextView transactionresponseText = findViewById(R.id.transResposne);
+                transactionresponseText.setText("Canceled");
+                new Thread(new Runnable() {
+                    public void run() {
+                        //cancels any active transaction
+                        DSIEMVAndroidInstance.getInstance(MainActivity.this).CancelTransaction();
+                    }
+
+                }).start();
+            }
+        });
+
+        Button gdibtn = (Button) findViewById(getDevicesInfoButton);
+        gdibtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transMessageView.setText("Get Device Info");
+                TextView transactionresponseText = findViewById(R.id.transResposne);
+
+                 //gets device information
+                 String response =  DSIEMVAndroidInstance.getInstance(MainActivity.this).GetDevicesInfo();
+                transactionresponseText.setText(response);
+
+            }
+        });
+
+        //adding message listener for the VP3300, since the device has no screen the control sends messages back to the UI for card removal, etc.
+        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddMessageListener(new ProcessTransactionMessageListener() {
+            @Override
+            public void OnMessageChanged() {
+                //run on ui thread to set messages as they change form the control
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        TextView transMessageView = findViewById(R.id.transMessage);
+                        //get the newest message and set the text in the UI.
+                        transMessageView.setText(DSIEMVAndroidInstance.getInstance(MainActivity.this).GetMessage());
+                    }
+                });
+            }
+        });
+
+        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddBluetoothResponseListener(new BluetoothConnectionResponseListener() {
+            @Override
+            public void OnResponseChanged() {
+                //run on ui thread to tell user connection was successful
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
+                        TextView transResponseView = findViewById(R.id.transResposne);
+                        TextView transMessageView = findViewById(R.id.transMessage);
+                        transResponseView.setText(DSIEMVAndroidInstance.getInstance(MainActivity.this).GetBluetoothConnectionResponse());
+                        if(DSIEMVAndroidInstance.getInstance(MainActivity.this).GetBluetoothConnectionResponse().contains("Success")) {
+                            nodt.setText("Device: " + mConnectedBluetoothDevice);
+                            transMessageView.setText("Connected to " + mConnectedBluetoothDevice);
+                        }else{
+                            nodt.setText("Could not connect to device");
+                        }
+                    }
+                });
+            }
+        });
+
+        //adding a response listener, since the processing the transaction could happen asynchronously we added support for a response callback.
+        // This call back will return the response from the active "Process Transaction" call. In this demo app it is just displayed in the UI,
+        // however normally it would be serialized into an object or parsed for receipt printing and persisted to an integrators transaction database.
+        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddResponseListener(new ProcessTransactionResponseListener() {
+            @Override
+            public void OnResponseChanged() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        TextView transactionresponseText = findViewById(R.id.transResposne);
+                        transactionresponseText.setText(DSIEMVAndroidInstance.getInstance(MainActivity.this).GetResponse());
+                    }
+                });
+            }
+        });
+
+        //get the IP of the Android Device
+        String ipOfPhone = getIPAddress(true);
+        TextView ipView = findViewById(R.id.ipText);
+        ipView.setText("This Device IP: " + ipOfPhone);
+
+    }
+
+    private String setupSale(String amount, String merchID) {
+        Amount amt = new Amount(amount);
+        Transaction newSale = new Transaction(merchID,
+                "DSIEMVAndroind_Demo",
+                "EMVUSClient:1.27",
+                "EMVSale",
+                "EMV_VP3300_DATACAP",
+                "10",
+                amt,
+                "0010010010",
+                mConnectedBluetoothDevice,
+                "TEST",
+                "RecordNumberRequested",
+                "1");
+        TStream tStream = new TStream(newSale);
+
+        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+        Serializer serializer = new Persister();
+        try {
+            serializer.write(tStream, bao);
+        } catch (Exception ex) {
+            //serialization exception
+        }
+        return bao.toString();
+    }
+
+    private String setupReturn(String amount, String merchID) {
+        Amount amt = new Amount(amount);
+        Transaction newSale = new Transaction(merchID,
+                "DSIEMVAndroind_Demo",
+                "EMVUSClient:1.27",
+                "EMVReturn",
+                "EMV_VP3300_DATACAP",
+                "100",
+                amt,
+                "0010010010",
+                mConnectedBluetoothDevice,
+                "TEST",
+                "RecordNumberRequested",
+                "23");
+        TStream tStream = new TStream(newSale);
+
+        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+        Serializer serializer = new Persister();
+        try {
+            serializer.write(tStream, bao);
+        } catch (Exception ex) {
+            //serialization exception
+        }
+        return bao.toString();
+    }
+
+    //code to look for bluetooth le devices. This can be used to show the user a list of available devices,
+    // then pass a selected device name to the DSIEMVAndroid control to connect to it.
+    private void searchForBt() {
+        mNamePos = 0;
+        List<ScanFilter> filters = new ArrayList<>();
+        ScanSettings settings = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+                .build();
+        final BtleScanCallback mScanCallback = new BtleScanCallback();
+        // Getting the Bluetooth adapter
+        mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        if (mBtAdapter != null) {
+            final BluetoothLeScanner mBluetoothLeScanner = mBtAdapter.getBluetoothLeScanner();
+            mBluetoothLeScanner.startScan(filters, settings, mScanCallback);
+
+            final Runnable r = new Runnable() {
+                public void run() {
+                    Handler mHandler = new Handler();
+                    mHandler.postDelayed(this, 60000);
+                    mBluetoothLeScanner.stopScan(mScanCallback);
+                }
+            };
+        } else {
+
+        }
+    }
+
+    private class BtleScanCallback extends ScanCallback {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            String devName = result.getDevice().getName();
+            //add new device to list of available devices
+            if (devName != null && !devName.equals("") && !Arrays.asList(mDeviceList).contains(devName)) {
+                mDeviceList[mNamePos] = devName;
+                ListView list = mBTdialog.getListView();
+                ArrayAdapter adapter = (ArrayAdapter) list.getAdapter();
+                //update UI that there is an additional device in the list
+                adapter.notifyDataSetChanged();
+                mNamePos++;
+                if (mNamePos > 5) {
+                    mNamePos = 0;
+                }
+            }
+        }
+    }
+
+    //sample code to check for permissions that are needed for bluetooth communication.
+    private void hasPermissions() {
+
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Functionality limited");
+            builder.setMessage("This device does not support bluetooth. bluetooth devices cannot be communicated with");
+            builder.setPositiveButton(android.R.string.ok, null);
+            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                }
+
+            });
+            builder.show();
+        } else if (!mBluetoothAdapter.isEnabled()) {
+            requestBluetoothEnable();
+        } else {
+            // Bluetooth is enabled
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED) {
+                if (Build.VERSION.SDK_INT >= 29) {
+                    if (this.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        if (this.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                            builder.setTitle("This app needs background location access");
+                            builder.setMessage("Please grant location access so this app can operate bluetooth devices.");
+                            builder.setPositiveButton(android.R.string.ok, null);
+                            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+
+                                @TargetApi(23)
+                                @Override
+                                public void onDismiss(DialogInterface dialog) {
+                                    requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                                            PERMISSION_REQUEST_BACKGROUND_LOCATION);
+                                }
+
+                            });
+                            builder.show();
+                        } else {
+                            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                            builder.setTitle("Functionality limited");
+                            builder.setMessage("Since background location access has not been granted, this app will not be able to can operate bluetooth devices.  Please go to Settings -> Applications -> Permissions and grant background location access to this app.");
+                            builder.setPositiveButton(android.R.string.ok, null);
+                            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+
+                                @Override
+                                public void onDismiss(DialogInterface dialog) {
+                                }
+
+                            });
+                            builder.show();
+                        }
+
+                    }
+                }
+            } else {
+                if (!this.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                            PERMISSION_REQUEST_FINE_LOCATION);
+                } else {
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                    builder.setTitle("Functionality limited");
+                    builder.setMessage("Since location access has not been granted, this app will not be able to discover beacons.  Please go to Settings -> Applications -> Permissions and grant location access to this app.");
+                    builder.setPositiveButton(android.R.string.ok, null);
+                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+
+                        @Override
+                        public void onDismiss(DialogInterface dialog) {
+                        }
+
+                    });
+                    builder.show();
+                }
+
+            }
+        }
+    }
+
+    private void requestBluetoothEnable() {
+        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+    }
+
+    public static String getIPAddress(boolean useIPv4) {
+        try {
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface intf : interfaces) {
+                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                for (InetAddress addr : addrs) {
+                    if (!addr.isLoopbackAddress()) {
+                        String sAddr = addr.getHostAddress();
+                        //boolean isIPv4 = InetAddressUtils.isIPv4Address(sAddr);
+                        boolean isIPv4 = sAddr.indexOf(':')<0;
+
+                        if (useIPv4) {
+                            if (isIPv4)
+                                return sAddr;
+                        } else {
+                            if (!isIPv4) {
+                                int delim = sAddr.indexOf('%'); // drop ip6 zone suffix
+                                return delim<0 ? sAddr.toUpperCase() : sAddr.substring(0, delim).toUpperCase();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) { } // for now eat exceptions
+        return "";
+    }
+}
