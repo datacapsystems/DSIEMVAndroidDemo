@@ -99,7 +99,7 @@
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/cancelButton" />
+        app:layout_constraintTop_toBottomOf="@id/getDevicesInfoButton" />
 
     <ScrollView
         android:layout_width="409dp"
@@ -157,7 +157,15 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Device Info"
+        app:layout_constraintStart_toStartOf="@id/cancelButton"
+        app:layout_constraintTop_toBottomOf="@id/cancelButton" />
+
+    <Button
+        android:id="@+id/emvParamDownloadButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Param DL"
         app:layout_constraintStart_toStartOf="@id/returnButton"
-        app:layout_constraintTop_toBottomOf="@+id/saleButton" />
+        app:layout_constraintTop_toBottomOf="@id/returnButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

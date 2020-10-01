@@ -3,9 +3,10 @@ package com.example.dsiemvandroiddemo;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.datacap.android.BluetoothConnectionResponseListener;
+import com.datacap.android.BluetoothConnectionListener;
+import com.datacap.android.EstablishBluetoothConnectionResponseListener;
 import com.datacap.android.DSIEMVAndroid;
-import com.datacap.android.ProcessTransactionMessageListener;
+import com.datacap.android.ProcessTransactionDisplayMessageListener;
 import com.datacap.android.ProcessTransactionResponseListener;
 
 import android.Manifest;
@@ -25,6 +26,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -57,6 +59,7 @@ import static com.example.dsiemvandroiddemo.R.id.saleButton;
 import static com.example.dsiemvandroiddemo.R.id.returnButton;
 import static com.example.dsiemvandroiddemo.R.id.cancelButton;
 import static com.example.dsiemvandroiddemo.R.id.getDevicesInfoButton;
+import static com.example.dsiemvandroiddemo.R.id.emvParamDownloadButton;
 import static com.example.dsiemvandroiddemo.R.id.amountText;
 import static com.example.dsiemvandroiddemo.R.id.merchantIDText;
 import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
@@ -138,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 //does a local search for BT devices in discovery mode
                 searchForBt();
-
                 mBTdialog.show();
             }
         });
@@ -225,25 +227,50 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //adding message listener for the VP3300, since the device has no screen the control sends messages back to the UI for card removal, etc.
-        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddMessageListener(new ProcessTransactionMessageListener() {
+        Button emvbtn = (Button) findViewById(emvParamDownloadButton);
+        emvbtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void OnMessageChanged() {
+            public void onClick(View v) {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transMessageView.setText("EMV Param Download");
+                TextView transactionresponseText = findViewById(R.id.transResposne);
+                transactionresponseText.setText("");
+                TextView merchIDtv = (TextView) findViewById(merchantIDText);
+                final String merchID = merchIDtv.getText().toString();
+                new Thread(new Runnable() {
+                    public void run() {
+
+                        //generates xml for running a EMVParamDownload
+                        String xmlRequest = setupParamDownload(merchID);
+                        //runs the sale to the connected BT device
+                        DSIEMVAndroidInstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+
+                    }
+
+                }).start();
+
+            }
+        });
+
+        //adding message listener for the VP3300, since the device has no screen the control sends messages back to the UI for card removal, etc.
+        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddProcessTransactionDisplayMessageListener(new ProcessTransactionDisplayMessageListener() {
+            @Override
+            public void OnDisplayMessageChanged(final String message) {
                 //run on ui thread to set messages as they change form the control
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         TextView transMessageView = findViewById(R.id.transMessage);
                         //get the newest message and set the text in the UI.
-                        transMessageView.setText(DSIEMVAndroidInstance.getInstance(MainActivity.this).GetMessage());
+                        transMessageView.setText(message);
                     }
                 });
             }
         });
 
-        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddBluetoothResponseListener(new BluetoothConnectionResponseListener() {
+        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddEstablishBluetoothConnectionResponseListener(new EstablishBluetoothConnectionResponseListener() {
             @Override
-            public void OnResponseChanged() {
+            public void OnEstablishBluetoothConnectionResponseChanged(final String response) {
                 //run on ui thread to tell user connection was successful
                 runOnUiThread(new Runnable() {
                     @Override
@@ -251,9 +278,9 @@ public class MainActivity extends AppCompatActivity {
                         TextView nodt = (TextView) findViewById(nameOfDeviceText);
                         TextView transResponseView = findViewById(R.id.transResposne);
                         TextView transMessageView = findViewById(R.id.transMessage);
-                        transResponseView.setText(DSIEMVAndroidInstance.getInstance(MainActivity.this).GetBluetoothConnectionResponse());
-                        if(DSIEMVAndroidInstance.getInstance(MainActivity.this).GetBluetoothConnectionResponse().contains("Success")) {
-                            nodt.setText("Device: " + mConnectedBluetoothDevice);
+                        transResponseView.setText(response);
+                        if(response.contains("Success")) {
+                            nodt.setText("Connected: " + mConnectedBluetoothDevice);
                             transMessageView.setText("Connected to " + mConnectedBluetoothDevice);
                         }else{
                             nodt.setText("Could not connect to device");
@@ -263,17 +290,35 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddBluetoothConnectionListener(new BluetoothConnectionListener() {
+            @Override
+            public void OnBluetoothConnectionListenerChanged(final boolean isConnected) {
+                //run on ui thread to tell user connection was successful
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
+                        if(isConnected) {
+                            nodt.setText("Connected: " + mConnectedBluetoothDevice);
+                        }else{
+                            nodt.setText("Disconnected: " + mConnectedBluetoothDevice);
+                        }
+                    }
+                });
+            }
+        });
+
         //adding a response listener, since the processing the transaction could happen asynchronously we added support for a response callback.
         // This call back will return the response from the active "Process Transaction" call. In this demo app it is just displayed in the UI,
         // however normally it would be serialized into an object or parsed for receipt printing and persisted to an integrators transaction database.
-        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddResponseListener(new ProcessTransactionResponseListener() {
+        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddProcessTransactionResponseListener(new ProcessTransactionResponseListener() {
             @Override
-            public void OnResponseChanged() {
+            public void OnProcessTransactionResponseChanged(final String response) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         TextView transactionresponseText = findViewById(R.id.transResposne);
-                        transactionresponseText.setText(DSIEMVAndroidInstance.getInstance(MainActivity.this).GetResponse());
+                        transactionresponseText.setText(response);
                     }
                 });
             }
@@ -326,6 +371,27 @@ public class MainActivity extends AppCompatActivity {
                 "TEST",
                 "RecordNumberRequested",
                 "23");
+        TStream tStream = new TStream(newSale);
+
+        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+        Serializer serializer = new Persister();
+        try {
+            serializer.write(tStream, bao);
+        } catch (Exception ex) {
+            //serialization exception
+        }
+        return bao.toString();
+    }
+
+    private String setupParamDownload(String merchID) {
+        Admin newSale = new Admin(merchID,
+                "DSIEMVAndroind_Demo",
+                "EMVUSClient:1.27",
+                "EMVParamDownload",
+                "EMV_VP3300_DATACAP",
+                "0010010010",
+                mConnectedBluetoothDevice,
+                "TEST");
         TStream tStream = new TStream(newSale);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
