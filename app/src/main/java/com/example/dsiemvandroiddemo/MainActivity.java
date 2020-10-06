@@ -342,7 +342,7 @@ public class MainActivity extends AppCompatActivity {
                 amt,
                 "0010010010",
                 mConnectedBluetoothDevice,
-                "TEST",
+                "CERT",
                 "RecordNumberRequested",
                 "1");
         TStream tStream = new TStream(newSale);
@@ -368,7 +368,7 @@ public class MainActivity extends AppCompatActivity {
                 amt,
                 "0010010010",
                 mConnectedBluetoothDevice,
-                "TEST",
+                "CERT",
                 "RecordNumberRequested",
                 "23");
         TStream tStream = new TStream(newSale);
@@ -391,7 +391,7 @@ public class MainActivity extends AppCompatActivity {
                 "EMV_VP3300_DATACAP",
                 "0010010010",
                 mConnectedBluetoothDevice,
-                "TEST");
+                "CERT");
         TStream tStream = new TStream(newSale);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
