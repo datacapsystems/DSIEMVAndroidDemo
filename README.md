@@ -2,9 +2,9 @@
 The DSIEMVAndroid Demo project gives the end user a sample usage as well a local listener to run test transactions.
 
 
-# Getting started with DSIEMVAndroid
+# Getting started with dsiEMVAndroid
 
-### Add DSIEMVAndroid.aar to your Android (Gradle) project
+### Add dsiEMVAndroid.aar to your Android (Gradle) project
 1. Place DSIEMVAndroid.aar in the `libs` folder of your app.
 2. Ensure `libs` folder is included in `flatDir` repositories in your app's build.gradle file.
 
@@ -16,23 +16,23 @@ The DSIEMVAndroid Demo project gives the end user a sample usage as well a local
     }
     ```
 
-3. Add DSIEMVAndroid.aar to the `dependencies` in your app's build.gradle file.
+3. Add dsiEMVAndroid.aar to the `dependencies` in your app's build.gradle file.
 
     ```
     dependencies {
-      compile (name: 'DSIEMVAndroid', ext: 'aar')
+      compile (name: 'dsiEMVAndroid', ext: 'aar')
     }
     ```
 
 ### Include the library in your code
 ```java
-import com.datacap.android.DSIEMVAndroid;
+import com.datacap.android.dsiEMVAndroid;
 ```
 
 ### Example usage to connect to a Bluetooth device
 ```java
 //pass the current activity as context for constructing the Andorid control
-DSIEMVAndroid mDSIEMVAndroid = new DSIEMVAndroid(MainActivity.this);
+dsiEMVAndroid mDSIEMVAndroid = new dsiEMVAndroid(MainActivity.this);
 
 //start the connection process
 new Thread(new Runnable() {
@@ -75,4 +75,4 @@ DSIEMVAndroidInstance.getInstance(MainActivity.this).AddProcessTransactionRespon
 
 
 ### Report bugs
-If you encounter any bugs or issues with the latest version of DSIEMVAndroid, please report them to us by opening a [GitHub Issue](https://github.com/datacapsystems/DSIEMVAndroidDemo/issues)!
+If you encounter any bugs or issues with the latest version of dsiEMVAndroid, please report them to us by opening a [GitHub Issue](https://github.com/datacapsystems/DSIEMVAndroidDemo/issues)!
