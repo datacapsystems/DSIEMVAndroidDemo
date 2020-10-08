@@ -5,55 +5,42 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.datacap.android.BluetoothConnectionListener;
 import com.datacap.android.EstablishBluetoothConnectionResponseListener;
-import com.datacap.android.DSIEMVAndroid;
-import com.datacap.android.ProcessTransactionDisplayMessageListener;
+import com.datacap.android.DisplayMessageListener;
 import com.datacap.android.ProcessTransactionResponseListener;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 
-import static android.widget.Toast.*;
 import static com.example.dsiemvandroiddemo.R.id.selectDevice;
 import static com.example.dsiemvandroiddemo.R.id.saleButton;
 import static com.example.dsiemvandroiddemo.R.id.returnButton;
@@ -107,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
                         //run in a separate thread to not block the UI.
                         new Thread(new Runnable() {
                             public void run() {
-                                DSIEMVAndroidInstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedBluetoothDevice);
+                                dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedBluetoothDevice);
                             }
                         }).start();
 
@@ -119,8 +106,8 @@ public class MainActivity extends AppCompatActivity {
                         transMessageView.setText("Connecting to Device...");
                         new Thread(new Runnable() {
                             public void run() {
-                                DSIEMVAndroidInstance.getInstance(MainActivity.this).Disconnect();
-                                DSIEMVAndroidInstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedBluetoothDevice);
+                                dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
+                                dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedBluetoothDevice);
                             }
                         }).start();
 
@@ -163,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
                         String xmlRequest = setupSale(amount, merchID);
                         //runs the sale to the connected BT device, this does not have to be a singleton.
                         // It was used as a singleton here to support transactions through the local listener server.
-                        DSIEMVAndroidInstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                        dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
                     }
 
                 }).start();
@@ -187,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
                         //generates xml for running a sale
                         String xmlRequest = setupReturn(amount, merchID);
                         //runs the sale to the connected BT device
-                        DSIEMVAndroidInstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                        dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
 
                     }
 
@@ -205,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
                 new Thread(new Runnable() {
                     public void run() {
                         //cancels any active transaction
-                        DSIEMVAndroidInstance.getInstance(MainActivity.this).CancelTransaction();
+                        dsiEMVAndroidinstance.getInstance(MainActivity.this).CancelRequest();
                     }
 
                 }).start();
@@ -221,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView transactionresponseText = findViewById(R.id.transResposne);
 
                  //gets device information
-                 String response =  DSIEMVAndroidInstance.getInstance(MainActivity.this).GetDevicesInfo();
+                 String response =  dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDevicesInfo();
                 transactionresponseText.setText(response);
 
             }
@@ -243,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
                         //generates xml for running a EMVParamDownload
                         String xmlRequest = setupParamDownload(merchID);
                         //runs the sale to the connected BT device
-                        DSIEMVAndroidInstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                        dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
 
                     }
 
@@ -253,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //adding message listener for the VP3300, since the device has no screen the control sends messages back to the UI for card removal, etc.
-        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddProcessTransactionDisplayMessageListener(new ProcessTransactionDisplayMessageListener() {
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddDisplayMessageListener(new DisplayMessageListener() {
             @Override
             public void OnDisplayMessageChanged(final String message) {
                 //run on ui thread to set messages as they change form the control
@@ -268,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddEstablishBluetoothConnectionResponseListener(new EstablishBluetoothConnectionResponseListener() {
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddEstablishBluetoothConnectionResponseListener(new EstablishBluetoothConnectionResponseListener() {
             @Override
             public void OnEstablishBluetoothConnectionResponseChanged(final String response) {
                 //run on ui thread to tell user connection was successful
@@ -290,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddBluetoothConnectionListener(new BluetoothConnectionListener() {
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddBluetoothConnectionListener(new BluetoothConnectionListener() {
             @Override
             public void OnBluetoothConnectionListenerChanged(final boolean isConnected) {
                 //run on ui thread to tell user connection was successful
@@ -311,7 +298,7 @@ public class MainActivity extends AppCompatActivity {
         //adding a response listener, since the processing the transaction could happen asynchronously we added support for a response callback.
         // This call back will return the response from the active "Process Transaction" call. In this demo app it is just displayed in the UI,
         // however normally it would be serialized into an object or parsed for receipt printing and persisted to an integrators transaction database.
-        DSIEMVAndroidInstance.getInstance(MainActivity.this).AddProcessTransactionResponseListener(new ProcessTransactionResponseListener() {
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddProcessTransactionResponseListener(new ProcessTransactionResponseListener() {
             @Override
             public void OnProcessTransactionResponseChanged(final String response) {
                 runOnUiThread(new Runnable() {

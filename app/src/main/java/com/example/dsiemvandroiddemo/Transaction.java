@@ -26,7 +26,6 @@ public class Transaction {
         this.POSPackageID = pOSPackageID;
         this.TranCode = tranCode;
         this.SecureDevice = secureDevice;
-        this.ComPort = "1";
         this.InvoiceNo = invoiceNo;
         this.Amount = amount;
         this.SequenceNo = sequenceNo;

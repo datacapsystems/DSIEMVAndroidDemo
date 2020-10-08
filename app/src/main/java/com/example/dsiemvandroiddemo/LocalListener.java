@@ -3,8 +3,6 @@ package com.example.dsiemvandroiddemo;
 import android.content.Context;
 import android.util.Log;
 
-import com.datacap.android.DSIEMVAndroid;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,7 +37,7 @@ public class LocalListener extends NanoHTTPD {
             try {
                 session.parseBody(files);
                 final String msg = files.get("postData");
-                returnMSG = DSIEMVAndroidInstance.getInstance(AppContext).ProcessTransaction(msg);
+                returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).ProcessTransaction(msg);
 
             } catch (Exception ex) {
                 Log.i("Local Listener", ex.getMessage());
