@@ -34,6 +34,19 @@ public class Transaction {
         this.RecordNo = recordNo;
         this.RefNo = refNo;
     }
+    public Transaction(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String invoiceNo,  Amount amount, String sequenceNo, String operationMode, String recordNo, String refNo){
+        this.MerchantID = merchantID;
+        this.UserTrace = userTrace;
+        this.POSPackageID = pOSPackageID;
+        this.TranCode = tranCode;
+        this.SecureDevice = secureDevice;
+        this.InvoiceNo = invoiceNo;
+        this.Amount = amount;
+        this.SequenceNo = sequenceNo;
+        this.OperationMode = operationMode;
+        this.RecordNo = recordNo;
+        this.RefNo = refNo;
+    }
 
     public String getMerchantID() {
         return MerchantID;

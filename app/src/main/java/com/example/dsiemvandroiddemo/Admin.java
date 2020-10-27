@@ -22,6 +22,16 @@ public class Admin {
         this.BluetoothDeviceName = bluetoothDeviceName;
         this.OperationMode = operationMode;
     }
+    public Admin(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String sequenceNo, String operationMode){
+        this.MerchantID = merchantID;
+        this.UserTrace = userTrace;
+        this.POSPackageID = pOSPackageID;
+        this.TranCode = tranCode;
+        this.SecureDevice = secureDevice;
+        this.ComPort = "1";
+        this.SequenceNo = sequenceNo;
+        this.OperationMode = operationMode;
+    }
 
     public String getMerchantID() {
         return MerchantID;

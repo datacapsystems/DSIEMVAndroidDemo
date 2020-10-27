@@ -56,10 +56,11 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
     private static final int PERMISSION_REQUEST_BACKGROUND_LOCATION = 2;
     private static final int REQUEST_ENABLE_BT = 3;
+    private static final String VP300_USB = "IDTECH-VP3300-USB";
     private BluetoothAdapter mBtAdapter;
-    private DialogInterface.OnClickListener mBluetoothSelection;
-    private String mConnectedBluetoothDevice = "";
-    private int mNamePos = 0;
+    private DialogInterface.OnClickListener mDeviceSelection;
+    private String mConnectedDevice = "";
+    private int mNamePos = 1;
     private String[] mDeviceList = {"", "", "", "", "", ""};
     private AlertDialog mBTdialog;
 
@@ -73,18 +74,19 @@ public class MainActivity extends AppCompatActivity {
         try {
             //sets up local endpoint to be used with EMV US Test Client
             LocalListener li = new LocalListener(MainActivity.this);
-        } catch (Exception ex){
+        } catch (Exception ex) {
             //could not start the local server listener
         }
-        //setup BT dialog click action
-        mBluetoothSelection = new DialogInterface.OnClickListener() {
+
+        //setup device dialog click action
+        mDeviceSelection = new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 ListView lv = ((AlertDialog) dialog).getListView();
                 TextView v = (TextView) lv.getChildAt(which);
                 String tempName = v.getText().toString();
                 if (!tempName.equals("")) {
-                    if (mConnectedBluetoothDevice.equals(tempName)) {
+                    if (mConnectedDevice.equals(tempName) && !mConnectedDevice.equals(VP300_USB) && !tempName.equals(VP300_USB)) {
                         TextView nodt = (TextView) findViewById(nameOfDeviceText);
                         nodt.setText("Connecting to Device...");
                         TextView transMessageView = findViewById(R.id.transMessage);
@@ -94,12 +96,12 @@ public class MainActivity extends AppCompatActivity {
                         //run in a separate thread to not block the UI.
                         new Thread(new Runnable() {
                             public void run() {
-                                dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedBluetoothDevice);
+                                dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedDevice);
                             }
                         }).start();
 
-                    } else {
-                        mConnectedBluetoothDevice = tempName;
+                    } else if (!tempName.equals(VP300_USB)) {
+                        mConnectedDevice = tempName;
                         TextView nodt = (TextView) findViewById(nameOfDeviceText);
                         nodt.setText("Connecting to Device...");
                         TextView transMessageView = findViewById(R.id.transMessage);
@@ -107,18 +109,28 @@ public class MainActivity extends AppCompatActivity {
                         new Thread(new Runnable() {
                             public void run() {
                                 dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
-                                dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedBluetoothDevice);
+                                dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedDevice);
                             }
                         }).start();
-
+                    } else {
+                        //A usb based device needs no initial connection method, removing any previous connections here.
+                        mConnectedDevice = tempName;
+                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
+                        nodt.setText(mConnectedDevice);
+                        new Thread(new Runnable() {
+                            public void run() {
+                                dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
+                            }
+                        }).start();
                     }
                 }
             }
         };
-        //Alert dialog for selecting BT devices
+        //Alert dialog for selecting a device
+        mDeviceList[0] = VP300_USB;
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setTitle("Choose a Bluetooth Device" + System.lineSeparator() + "Searching...");
-        builder.setItems(mDeviceList, mBluetoothSelection);
+        builder.setTitle("Choose a Device" + System.lineSeparator() + "Searching...");
+        builder.setItems(mDeviceList, mDeviceSelection);
         mBTdialog = builder.create();
 
         //button click listener for selecting device, brings up alert dialog
@@ -126,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //does a local search for BT devices in discovery mode
+                //does a local search for  devices in discovery mode
                 searchForBt();
                 mBTdialog.show();
             }
@@ -148,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         //generates xml for running a sale
                         String xmlRequest = setupSale(amount, merchID);
-                        //runs the sale to the connected BT device, this does not have to be a singleton.
+                        //runs the sale to the connected device, this does not have to be a singleton.
                         // It was used as a singleton here to support transactions through the local listener server.
                         dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
                     }
@@ -173,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         //generates xml for running a sale
                         String xmlRequest = setupReturn(amount, merchID);
-                        //runs the sale to the connected BT device
+                        //runs the sale to the connected device
                         dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
 
                     }
@@ -207,8 +219,8 @@ public class MainActivity extends AppCompatActivity {
                 transMessageView.setText("Get Device Info");
                 TextView transactionresponseText = findViewById(R.id.transResposne);
 
-                 //gets device information
-                 String response =  dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDevicesInfo();
+                //gets device information
+                String response = dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDevicesInfo();
                 transactionresponseText.setText(response);
 
             }
@@ -229,7 +241,7 @@ public class MainActivity extends AppCompatActivity {
 
                         //generates xml for running a EMVParamDownload
                         String xmlRequest = setupParamDownload(merchID);
-                        //runs the sale to the connected BT device
+                        //runs the sale to the connected device
                         dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
 
                     }
@@ -266,10 +278,10 @@ public class MainActivity extends AppCompatActivity {
                         TextView transResponseView = findViewById(R.id.transResposne);
                         TextView transMessageView = findViewById(R.id.transMessage);
                         transResponseView.setText(response);
-                        if(response.contains("Success")) {
-                            nodt.setText("Connected: " + mConnectedBluetoothDevice);
-                            transMessageView.setText("Connected to " + mConnectedBluetoothDevice);
-                        }else{
+                        if (response.contains("Success")) {
+                            nodt.setText("Connected: " + mConnectedDevice);
+                            transMessageView.setText("Connected to " + mConnectedDevice);
+                        } else {
                             nodt.setText("Could not connect to device");
                         }
                     }
@@ -285,10 +297,10 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         TextView nodt = (TextView) findViewById(nameOfDeviceText);
-                        if(isConnected) {
-                            nodt.setText("Connected: " + mConnectedBluetoothDevice);
-                        }else{
-                            nodt.setText("Disconnected: " + mConnectedBluetoothDevice);
+                        if (isConnected) {
+                            nodt.setText("Connected: " + mConnectedDevice);
+                        } else {
+                            nodt.setText("Disconnected: " + mConnectedDevice);
                         }
                     }
                 });
@@ -316,22 +328,38 @@ public class MainActivity extends AppCompatActivity {
         TextView ipView = findViewById(R.id.ipText);
         ipView.setText("This Device IP: " + ipOfPhone);
 
+
     }
 
     private String setupSale(String amount, String merchID) {
         Amount amt = new Amount(amount);
-        Transaction newSale = new Transaction(merchID,
-                "DSIEMVAndroind_Demo",
-                "EMVUSClient:1.27",
-                "EMVSale",
-                "EMV_VP3300_DATACAP",
-                "10",
-                amt,
-                "0010010010",
-                mConnectedBluetoothDevice,
-                "CERT",
-                "RecordNumberRequested",
-                "1");
+        Transaction newSale;
+        if (!mConnectedDevice.equals(VP300_USB)) {
+            newSale = new Transaction(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVSale",
+                    "EMV_VP3300_DATACAP",
+                    "10",
+                    amt,
+                    "0010010010",
+                    mConnectedDevice,
+                    "CERT",
+                    "RecordNumberRequested",
+                    "1");
+        } else {
+            newSale = new Transaction(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVSale",
+                    "EMV_VP3300_DATACAP",
+                    "10",
+                    amt,
+                    "0010010010",
+                    "CERT",
+                    "RecordNumberRequested",
+                    "1");
+        }
         TStream tStream = new TStream(newSale);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
@@ -346,18 +374,34 @@ public class MainActivity extends AppCompatActivity {
 
     private String setupReturn(String amount, String merchID) {
         Amount amt = new Amount(amount);
-        Transaction newSale = new Transaction(merchID,
-                "DSIEMVAndroind_Demo",
-                "EMVUSClient:1.27",
-                "EMVReturn",
-                "EMV_VP3300_DATACAP",
-                "100",
-                amt,
-                "0010010010",
-                mConnectedBluetoothDevice,
-                "CERT",
-                "RecordNumberRequested",
-                "23");
+        Transaction newSale;
+        if (!mConnectedDevice.equals(VP300_USB)) {
+            newSale = new Transaction(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVReturn",
+                    "EMV_VP3300_DATACAP",
+                    "100",
+                    amt,
+                    "0010010010",
+                    mConnectedDevice,
+                    "CERT",
+                    "RecordNumberRequested",
+                    "23");
+        } else {
+            //USB connected devices need no "BluetoothDeviceName"
+            newSale = new Transaction(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVReturn",
+                    "EMV_VP3300_DATACAP",
+                    "100",
+                    amt,
+                    "0010010010",
+                    "CERT",
+                    "RecordNumberRequested",
+                    "23");
+        }
         TStream tStream = new TStream(newSale);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
@@ -371,14 +415,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String setupParamDownload(String merchID) {
-        Admin newSale = new Admin(merchID,
-                "DSIEMVAndroind_Demo",
-                "EMVUSClient:1.27",
-                "EMVParamDownload",
-                "EMV_VP3300_DATACAP",
-                "0010010010",
-                mConnectedBluetoothDevice,
-                "CERT");
+        Admin newSale;
+        if (!mConnectedDevice.equals(VP300_USB)) {
+            newSale = new Admin(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVParamDownload",
+                    "EMV_VP3300_DATACAP",
+                    "0010010010",
+                    mConnectedDevice,
+                    "CERT");
+        } else {
+            //USB connected devices need no "BluetoothDeviceName"
+            newSale = new Admin(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVParamDownload",
+                    "EMV_VP3300_DATACAP",
+                    "0010010010",
+                    "CERT");
+        }
+
         TStream tStream = new TStream(newSale);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
@@ -394,7 +451,7 @@ public class MainActivity extends AppCompatActivity {
     //code to look for bluetooth le devices. This can be used to show the user a list of available devices,
     // then pass a selected device name to the DSIEMVAndroid control to connect to it.
     private void searchForBt() {
-        mNamePos = 0;
+        mNamePos = 1;
         List<ScanFilter> filters = new ArrayList<>();
         ScanSettings settings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
@@ -432,7 +489,7 @@ public class MainActivity extends AppCompatActivity {
                 adapter.notifyDataSetChanged();
                 mNamePos++;
                 if (mNamePos > 5) {
-                    mNamePos = 0;
+                    mNamePos = 1;
                 }
             }
         }
@@ -538,7 +595,7 @@ public class MainActivity extends AppCompatActivity {
                     if (!addr.isLoopbackAddress()) {
                         String sAddr = addr.getHostAddress();
                         //boolean isIPv4 = InetAddressUtils.isIPv4Address(sAddr);
-                        boolean isIPv4 = sAddr.indexOf(':')<0;
+                        boolean isIPv4 = sAddr.indexOf(':') < 0;
 
                         if (useIPv4) {
                             if (isIPv4)
@@ -546,13 +603,14 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             if (!isIPv4) {
                                 int delim = sAddr.indexOf('%'); // drop ip6 zone suffix
-                                return delim<0 ? sAddr.toUpperCase() : sAddr.substring(0, delim).toUpperCase();
+                                return delim < 0 ? sAddr.toUpperCase() : sAddr.substring(0, delim).toUpperCase();
                             }
                         }
                     }
                 }
             }
-        } catch (Exception ex) { } // for now eat exceptions
+        } catch (Exception ex) {
+        } // for now eat exceptions
         return "";
     }
 }
