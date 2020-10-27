@@ -30,6 +30,7 @@ import com.datacap.android.dsiEMVAndroid;
 ```
 
 ### Example usage to connect to a Bluetooth device
+*When connecting to a USB device, this method is not needed
 ```java
 //pass the current activity as context for constructing the Andorid control
 dsiEMVAndroid mDSIEMVAndroid = new dsiEMVAndroid(MainActivity.this);
