@@ -101,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
                         //run in a separate thread to not block the UI.
                         new Thread(new Runnable() {
                             public void run() {
+                                dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
                                 dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedDevice);
                             }
                         }).start();
