@@ -19,6 +19,8 @@ public class Transaction {
     private String Frequency;
     private String BluetoothDeviceName;
     private String OperationMode;
+    private String PinPadIpAddress;
+    private String PinPadIpPort;
 
     public Transaction(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String invoiceNo,  Amount amount, String sequenceNo,  String bluetoothDeviceName, String operationMode, String recordNo, String refNo){
         this.MerchantID = merchantID;
@@ -26,7 +28,6 @@ public class Transaction {
         this.POSPackageID = pOSPackageID;
         this.TranCode = tranCode;
         this.SecureDevice = secureDevice;
-        this.ComPort = "1";
         this.InvoiceNo = invoiceNo;
         this.Amount = amount;
         this.SequenceNo = sequenceNo;
@@ -34,6 +35,35 @@ public class Transaction {
         this.OperationMode = operationMode;
         this.RecordNo = recordNo;
         this.RefNo = refNo;
+    }
+    public Transaction(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String invoiceNo,  Amount amount, String sequenceNo, String operationMode, String recordNo, String refNo){
+        this.MerchantID = merchantID;
+        this.UserTrace = userTrace;
+        this.POSPackageID = pOSPackageID;
+        this.TranCode = tranCode;
+        this.SecureDevice = secureDevice;
+        this.InvoiceNo = invoiceNo;
+        this.Amount = amount;
+        this.SequenceNo = sequenceNo;
+        this.OperationMode = operationMode;
+        this.RecordNo = recordNo;
+        this.RefNo = refNo;
+    }
+
+    public Transaction(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String invoiceNo,  Amount amount, String sequenceNo, String operationMode, String recordNo, String refNo, String pinPadIpAddress, String pinPadIpPort){
+        this.MerchantID = merchantID;
+        this.UserTrace = userTrace;
+        this.POSPackageID = pOSPackageID;
+        this.TranCode = tranCode;
+        this.SecureDevice = secureDevice;
+        this.InvoiceNo = invoiceNo;
+        this.Amount = amount;
+        this.SequenceNo = sequenceNo;
+        this.OperationMode = operationMode;
+        this.RecordNo = recordNo;
+        this.RefNo = refNo;
+        this.PinPadIpAddress = pinPadIpAddress;
+        this.PinPadIpPort = pinPadIpPort;
     }
 
     public String getMerchantID() {
@@ -178,5 +208,13 @@ public class Transaction {
 
     public void setOperationMode(String operationMode) {
         this.OperationMode = operationMode;
+    }
+
+    public String getPinPadIpAddress() {
+        return PinPadIpAddress;
+    }
+
+    public void setPinPadIpAddress(String pinPadIpAddress) {
+        PinPadIpAddress = pinPadIpAddress;
     }
 }
