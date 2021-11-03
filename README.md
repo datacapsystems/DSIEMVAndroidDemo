@@ -1,8 +1,8 @@
 # DSIEMVAndroidDemo
 The DSIEMVAndroid Demo project gives the end user a sample usage as well a local listener to run test transactions.
 
-#Download the apk here: 
-[APK](https://raw.githubusercontent.com/datacapsystems/DSIEMVAndroidDemo/development/dsiEMVAndroidDemo.apk)
+# Download the apk here: 
+[dsiEMVAndroid.apk](https://raw.githubusercontent.com/datacapsystems/DSIEMVAndroidDemo/development/dsiEMVAndroidDemo.apk)
 
 
 # Getting started with dsiEMVAndroid
