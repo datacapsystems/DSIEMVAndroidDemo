@@ -38,7 +38,9 @@ import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 import static com.example.dsiemvandroiddemo.R.id.selectDevice;
@@ -58,15 +60,29 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
     private static final int PERMISSION_REQUEST_BACKGROUND_LOCATION = 2;
     private static final int REQUEST_ENABLE_BT = 3;
-    private static final String VP300_USB = "IDTECH-VP3300-USB";
-    private static final String VP300_RS232 = "IDTECH-VP3300-RS232";
+    private static final String VP3300_USB = "IDTECH-VP3300-USB";
+    private static final String VP3300_RS232 = "IDTECH-VP3300-RS232";
     private static final String LANE3000_IP = "INGENICO_LANE_3000_IP";
+    private static final String PAX_ANDROID_IP = "PAX_ANDROID_IP";
     private BluetoothAdapter mBtAdapter;
     private DialogInterface.OnClickListener mDeviceSelection;
     private String mConnectedDevice = "";
     private int mNamePos = 1;
-    private String[] mDeviceList = {"", "", "", "", "", "", "", ""};
+    private String[] mDeviceList = {"", "", "", "", "", "", "", "", ""};
     private AlertDialog mBTdialog;
+
+    private static final Map<String, String> padMap;
+
+    static {
+        padMap = new HashMap<String, String>();
+        padMap.put("A77", "EMV_A77_DATACAP_E2E");
+        padMap.put("A60", "EMV_A60_DATACAP_E2E");
+        padMap.put("A920Pro", "EMV_A920PRO_DATACAP_E2E");
+        padMap.put("A920", "EMV_A920PRO_DATACAP_E2E");
+        padMap.put("Aries6", "EMV_ARIES6_DATACAP_E2E");
+        padMap.put("Aries8", "EMV_ARIES8_DATACAP_E2E");
+        padMap.put("IM30", "EMV_A920PRO_DATACAP_E2E");
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,11 +107,12 @@ public class MainActivity extends AppCompatActivity {
                 String tempName = v.getText().toString();
                 if (!tempName.equals("")) {
                     //Skipping over all of the non bluetooth devices
-                    boolean isBluetoothName = !tempName.equals(VP300_USB) && !tempName.equals(LANE3000_IP) && !tempName.equals(VP300_RS232);
+                    boolean isBluetoothName = !tempName.equals(VP3300_USB) && !tempName.equals(LANE3000_IP) && !tempName.equals(VP3300_RS232) && !tempName.equals(PAX_ANDROID_IP);
                     if (mConnectedDevice.equals(tempName) &&
-                            (!mConnectedDevice.equals(VP300_USB) &&
+                            (!mConnectedDevice.equals(VP3300_USB) &&
                                     !mConnectedDevice.equals(LANE3000_IP) &&
-                                    !mConnectedDevice.equals(VP300_RS232)) &&
+                                    !mConnectedDevice.equals(PAX_ANDROID_IP) &&
+                                    !mConnectedDevice.equals(VP3300_RS232)) &&
                             isBluetoothName) {
                         TextView nodt = (TextView) findViewById(nameOfDeviceText);
                         nodt.setText("Connecting to Device...");
@@ -138,9 +155,10 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         //Alert dialog for selecting a device
-        mDeviceList[0] = VP300_USB;
+        mDeviceList[0] = VP3300_USB;
         mDeviceList[1] = LANE3000_IP;
-        mDeviceList[2] = VP300_RS232;
+        mDeviceList[2] = PAX_ANDROID_IP;
+        mDeviceList[3] = VP3300_RS232;
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("Choose a Device" + System.lineSeparator() + "Searching...");
         builder.setItems(mDeviceList, mDeviceSelection);
@@ -342,6 +360,9 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        if(mConnectedDevice.equals(PAX_ANDROID_IP)){
+                            bringtofront();
+                        }
                         TextView transactionresponseText = findViewById(R.id.transResposne);
                         transactionresponseText.setText(response);
                     }
@@ -374,10 +395,25 @@ public class MainActivity extends AppCompatActivity {
                     "1",
                     padIP,
                     padPort);
-        } else if (mConnectedDevice.equals(VP300_USB) || mConnectedDevice.equals(VP300_RS232)) {
+        } else if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
+            newSale = new Transaction(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVSale",
+                    determineSecureDevice(),
+                    "10",
+                    amt,
+                    "0010010010",
+                    "CERT",
+                    "RecordNumberRequested",
+                    "1",
+                    padIP,
+                    "1235");
+
+        } else if (mConnectedDevice.equals(VP3300_USB) || mConnectedDevice.equals(VP3300_RS232)) {
             String secureDevice = "EMV_VP3300_DATACAP";
             //RS232 takes a different secure device name
-            if( mConnectedDevice.equals(VP300_RS232)){
+            if (mConnectedDevice.equals(VP3300_RS232)) {
                 secureDevice = "EMV_VP3300_DATACAP_RS232";
             }
             newSale = new Transaction(merchID,
@@ -391,7 +427,7 @@ public class MainActivity extends AppCompatActivity {
                     "CERT",
                     "RecordNumberRequested",
                     "1");
-        } else{
+        } else {
             newSale = new Transaction(merchID,
                     "DSIEMVAndroind_Demo",
                     "EMVUSClient:1.27",
@@ -434,11 +470,26 @@ public class MainActivity extends AppCompatActivity {
                     "23",
                     padIP,
                     padPort);
-        } else if (mConnectedDevice.equals(VP300_USB) || mConnectedDevice.equals(VP300_RS232)) {
+        } else if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
+            newReturn = new Transaction(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVReturn",
+                    determineSecureDevice(),
+                    "10",
+                    amt,
+                    "0010010010",
+                    "CERT",
+                    "RecordNumberRequested",
+                    "1",
+                    padIP,
+                    "1235");
+
+        } else if (mConnectedDevice.equals(VP3300_USB) || mConnectedDevice.equals(VP3300_RS232)) {
             //USB connected devices need no "BluetoothDeviceName"
             String secureDevice = "EMV_VP3300_DATACAP";
             //RS232 takes a different secure device name
-            if( mConnectedDevice.equals(VP300_RS232)){
+            if (mConnectedDevice.equals(VP3300_RS232)) {
                 secureDevice = "EMV_VP3300_DATACAP_RS232";
             }
             newReturn = new Transaction(merchID,
@@ -490,11 +541,21 @@ public class MainActivity extends AppCompatActivity {
                     "CERT",
                     padIP,
                     padPort);
-        } else if(mConnectedDevice.equals(VP300_USB) || mConnectedDevice.equals(VP300_RS232)){
+        } else if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
+            newParam = new Admin(merchID,
+                    "DSIEMVAndroind_Demo",
+                    "EMVUSClient:1.27",
+                    "EMVParamDownload",
+                    determineSecureDevice(),
+                    "0010010010",
+                    "CERT",
+                    padIP,
+                    "1235");
+        } else if (mConnectedDevice.equals(VP3300_USB) || mConnectedDevice.equals(VP3300_RS232)) {
             //USB connected devices need no "BluetoothDeviceName"
             String secureDevice = "EMV_VP3300_DATACAP";
             //RS232 takes a different secure device name
-            if( mConnectedDevice.equals(VP300_RS232)){
+            if (mConnectedDevice.equals(VP3300_RS232)) {
                 secureDevice = "EMV_VP3300_DATACAP_RS232";
             }
             newParam = new Admin(merchID,
@@ -530,7 +591,7 @@ public class MainActivity extends AppCompatActivity {
     //code to look for bluetooth le devices. This can be used to show the user a list of available devices,
     // then pass a selected device name to the DSIEMVAndroid control to connect to it.
     private void searchForBt() {
-        mNamePos = 3;
+        mNamePos = 4;
         List<ScanFilter> filters = new ArrayList<>();
         ScanSettings settings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
@@ -567,8 +628,8 @@ public class MainActivity extends AppCompatActivity {
                 //update UI that there is an additional device in the list
                 adapter.notifyDataSetChanged();
                 mNamePos++;
-                if (mNamePos > 7) {
-                    mNamePos = 3;
+                if (mNamePos > 8) {
+                    mNamePos = 4;
                 }
             }
         }
@@ -691,5 +752,28 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ex) {
         } // for now eat exceptions
         return "";
+    }
+
+    private static String determineSecureDevice() {
+        String deviceModel = android.os.Build.MODEL;
+        String secureDevice = padMap.get(deviceModel);
+        //if secure device cant be found, treat it like an A920 Pro
+        if (secureDevice == null) {
+            secureDevice = "EMV_A920PRO_DATACAP_E2E";
+        }
+        return secureDevice;
+    }
+    private void bringtofront()
+    {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Intent intent = new Intent(MainActivity.this.getApplicationContext(), MainActivity.this.getClass());
+                // You need this if starting
+                //  the activity from a service
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                MainActivity.this.startActivity(intent);
+            }
+        });
     }
 }
