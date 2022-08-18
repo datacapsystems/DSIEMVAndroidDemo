@@ -771,8 +771,9 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(MainActivity.this.getApplicationContext(), MainActivity.this.getClass());
                 // You need this if starting
                 //  the activity from a service
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                MainActivity.this.startActivity(intent);
+                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                startActivityIfNeeded(intent, 0);
             }
         });
     }

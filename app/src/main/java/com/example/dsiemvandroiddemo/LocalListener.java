@@ -37,6 +37,7 @@ public class LocalListener extends NanoHTTPD {
             try {
                 session.parseBody(files);
                 final String msg = files.get("postData");
+                Log.i("Local Listener", "Process Tran");
                 returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).ProcessTransaction(msg);
 
             } catch (Exception ex) {
