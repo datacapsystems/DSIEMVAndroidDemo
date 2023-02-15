@@ -10,8 +10,9 @@
         android:id="@+id/imageView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="4dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.514"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:srcCompat="@mipmap/logo" />
@@ -137,10 +138,11 @@
         android:id="@+id/transMessage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="45dp"
+        android:layout_marginTop="52dp"
         android:text="return message from DSIEMVAndroid"
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.495"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/getDevicesInfoButton" />
 
@@ -210,5 +212,40 @@
         android:text="Param DL"
         app:layout_constraintStart_toStartOf="@id/returnButton"
         app:layout_constraintTop_toBottomOf="@id/returnButton" />
+
+    <RadioGroup
+        android:layout_width="147dp"
+        android:layout_height="41dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="19dp"
+        android:checkedButton="@id/radioButtonCert"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toEndOf="@+id/PadPorttext"
+        app:layout_constraintTop_toBottomOf="@+id/getDevicesInfoButton">
+
+        <RadioButton
+            android:id="@+id/radioButtonCert"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onRadioButtonClicked"
+            android:text="Cert" />
+
+        <RadioButton
+            android:id="@+id/radioButtonProd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onRadioButtonClicked"
+            android:text="Prod" />
+    </RadioGroup>
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="1dp"
+        android:text="Environment"
+        app:layout_constraintStart_toEndOf="@+id/PadPorttext"
+        app:layout_constraintTop_toBottomOf="@+id/getDevicesInfoButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

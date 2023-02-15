@@ -27,6 +27,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.RadioButton;
 import android.widget.TextView;
 
 import org.simpleframework.xml.Serializer;
@@ -70,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
     private int mNamePos = 1;
     private String[] mDeviceList = {"", "", "", "", "", "", "", "", ""};
     private AlertDialog mBTdialog;
+    private String mOperationMode = "CERT";
 
     private static final Map<String, String> padMap;
 
@@ -81,6 +83,8 @@ public class MainActivity extends AppCompatActivity {
         padMap.put("A920", "EMV_A920PRO_DATACAP_E2E");
         padMap.put("Aries6", "EMV_ARIES6_DATACAP_E2E");
         padMap.put("Aries8", "EMV_ARIES8_DATACAP_E2E");
+        padMap.put("A35", "EMV_A35_DATACAP_E2E");
+        padMap.put("A30", "EMV_A30_DATACAP_E2E");
         padMap.put("IM30", "EMV_A920PRO_DATACAP_E2E");
     }
 
@@ -375,9 +379,24 @@ public class MainActivity extends AppCompatActivity {
         TextView ipView = findViewById(R.id.ipText);
         ipView.setText("This Device IP: " + ipOfPhone);
 
-
     }
 
+    public void onRadioButtonClicked(View view) {
+        // Is the button now checked?
+        boolean checked = ((RadioButton) view).isChecked();
+
+        // Check which radio button was clicked
+        switch(view.getId()) {
+            case R.id.radioButtonCert:
+                if (checked)
+                    mOperationMode = "CERT";
+                    break;
+            case R.id.radioButtonProd:
+                if (checked)
+                    mOperationMode = "PROD";
+                    break;
+        }
+    }
     private String setupSale(String amount, String merchID, String padIP, String padPort) {
         Amount amt = new Amount(amount);
         Transaction newSale;
@@ -390,7 +409,7 @@ public class MainActivity extends AppCompatActivity {
                     "10",
                     amt,
                     "0010010010",
-                    "CERT",
+                    mOperationMode,
                     "RecordNumberRequested",
                     "1",
                     padIP,
@@ -404,7 +423,7 @@ public class MainActivity extends AppCompatActivity {
                     "10",
                     amt,
                     "0010010010",
-                    "CERT",
+                    mOperationMode,
                     "RecordNumberRequested",
                     "1",
                     padIP,
@@ -424,7 +443,7 @@ public class MainActivity extends AppCompatActivity {
                     "10",
                     amt,
                     "0010010010",
-                    "CERT",
+                    mOperationMode,
                     "RecordNumberRequested",
                     "1");
         } else {
@@ -437,7 +456,7 @@ public class MainActivity extends AppCompatActivity {
                     amt,
                     "0010010010",
                     mConnectedDevice,
-                    "CERT",
+                    mOperationMode,
                     "RecordNumberRequested",
                     "1");
         }
@@ -465,7 +484,7 @@ public class MainActivity extends AppCompatActivity {
                     "100",
                     amt,
                     "0010010010",
-                    "CERT",
+                    mOperationMode,
                     "RecordNumberRequested",
                     "23",
                     padIP,
@@ -479,7 +498,7 @@ public class MainActivity extends AppCompatActivity {
                     "10",
                     amt,
                     "0010010010",
-                    "CERT",
+                    mOperationMode,
                     "RecordNumberRequested",
                     "1",
                     padIP,
@@ -500,7 +519,7 @@ public class MainActivity extends AppCompatActivity {
                     "100",
                     amt,
                     "0010010010",
-                    "CERT",
+                    mOperationMode,
                     "RecordNumberRequested",
                     "23");
         } else {
@@ -513,7 +532,7 @@ public class MainActivity extends AppCompatActivity {
                     amt,
                     "0010010010",
                     mConnectedDevice,
-                    "CERT",
+                    mOperationMode,
                     "RecordNumberRequested",
                     "23");
         }
@@ -538,7 +557,7 @@ public class MainActivity extends AppCompatActivity {
                     "EMVParamDownload",
                     "EMV_LANE3000_DATACAP_E2E",
                     "0010010010",
-                    "CERT",
+                    mOperationMode,
                     padIP,
                     padPort);
         } else if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
@@ -548,7 +567,7 @@ public class MainActivity extends AppCompatActivity {
                     "EMVParamDownload",
                     determineSecureDevice(),
                     "0010010010",
-                    "CERT",
+                    mOperationMode,
                     padIP,
                     "1235");
         } else if (mConnectedDevice.equals(VP3300_USB) || mConnectedDevice.equals(VP3300_RS232)) {
@@ -564,7 +583,7 @@ public class MainActivity extends AppCompatActivity {
                     "EMVParamDownload",
                     secureDevice,
                     "0010010010",
-                    "CERT");
+                    mOperationMode);
         } else {
             newParam = new Admin(merchID,
                     "DSIEMVAndroind_Demo",
@@ -573,7 +592,7 @@ public class MainActivity extends AppCompatActivity {
                     "EMV_VP3300_DATACAP",
                     "0010010010",
                     mConnectedDevice,
-                    "CERT");
+                    mOperationMode);
         }
 
         TStream tStream = new TStream(newParam);
