@@ -1,15 +1,12 @@
 package com.example.dsiemvandroiddemo;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.datacap.android.BluetoothConnectionListener;
 import com.datacap.android.EstablishBluetoothConnectionResponseListener;
 import com.datacap.android.DisplayMessageListener;
 import com.datacap.android.ProcessTransactionResponseListener;
 
 import android.Manifest;
-import android.annotation.TargetApi;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
@@ -42,6 +39,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 
 import static com.example.dsiemvandroiddemo.R.id.selectDevice;
@@ -56,8 +54,13 @@ import static com.example.dsiemvandroiddemo.R.id.IPPadtext;
 import static com.example.dsiemvandroiddemo.R.id.PadPorttext;
 import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
+
 public class MainActivity extends AppCompatActivity {
 
+    private final Logger LOGGER = Logger.getLogger("dsiEMVAndroidDemo");
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
     private static final int PERMISSION_REQUEST_BACKGROUND_LOCATION = 2;
     private static final int REQUEST_ENABLE_BT = 3;
@@ -364,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        if(mConnectedDevice.equals(PAX_ANDROID_IP)){
+                        if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
                             bringtofront();
                         }
                         TextView transactionresponseText = findViewById(R.id.transResposne);
@@ -386,17 +389,18 @@ public class MainActivity extends AppCompatActivity {
         boolean checked = ((RadioButton) view).isChecked();
 
         // Check which radio button was clicked
-        switch(view.getId()) {
+        switch (view.getId()) {
             case R.id.radioButtonCert:
                 if (checked)
                     mOperationMode = "CERT";
-                    break;
+                break;
             case R.id.radioButtonProd:
                 if (checked)
                     mOperationMode = "PROD";
-                    break;
+                break;
         }
     }
+
     private String setupSale(String amount, String merchID, String padIP, String padPort) {
         Amount amt = new Amount(amount);
         Transaction newSale;
@@ -655,89 +659,105 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //sample code to check for permissions that are needed for bluetooth communication.
-    private void hasPermissions() {
+    private void hasPermissions()
+    {
 
         BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null) {
+        if (mBluetoothAdapter == null)
+        {
             final AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle("Functionality limited");
             builder.setMessage("This device does not support bluetooth. bluetooth devices cannot be communicated with");
             builder.setPositiveButton(android.R.string.ok, null);
-            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                }
-
-            });
+            builder.setOnDismissListener(dialog -> { });
             builder.show();
-        } else if (!mBluetoothAdapter.isEnabled()) {
+        }
+        else if (!mBluetoothAdapter.isEnabled())
+        {
             requestBluetoothEnable();
-        } else {
-            // Bluetooth is enabled
+        }
+        else
+        {
+            //Bluetooth enabled
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED) {
-                if (Build.VERSION.SDK_INT >= 29) {
-                    if (this.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        if (this.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
-                            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                            builder.setTitle("This app needs background location access");
-                            builder.setMessage("Please grant location access so this app can operate bluetooth devices.");
-                            builder.setPositiveButton(android.R.string.ok, null);
-                            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-
-                                @TargetApi(23)
-                                @Override
-                                public void onDismiss(DialogInterface dialog) {
-                                    requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
-                                            PERMISSION_REQUEST_BACKGROUND_LOCATION);
+        ActivityResultLauncher<String[]> permissionRequest =
+                this.registerForActivityResult(new ActivityResultContracts
+                                .RequestMultiplePermissions(), result ->
+                        {
+                            Boolean fineLocationGranted = result.getOrDefault(
+                                    Manifest.permission.ACCESS_FINE_LOCATION, false);
+                            Boolean coarseLocationGranted = result.getOrDefault(
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,false);
+                            if (Build.VERSION.SDK_INT > 29)
+                            {
+                                Boolean backgroundLocationGranted = result.getOrDefault(
+                                        Manifest.permission.ACCESS_BACKGROUND_LOCATION, false);
+                                if (Boolean.FALSE.equals(backgroundLocationGranted))
+                                {
+                                    if (this.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                                    {
+                                        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                                        builder.setTitle("This app needs background location access");
+                                        builder.setMessage("Please grant location access so this app can operate bluetooth devices.");
+                                        builder.setPositiveButton(android.R.string.ok, null);
+                                        builder.setOnDismissListener((dialog) ->
+                                                {
+                                                    requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                                                            PERMISSION_REQUEST_BACKGROUND_LOCATION);
+                                                }
+                                        );
+                                        builder.show();
+                                    }
                                 }
-
-                            });
-                            builder.show();
-                        } else {
-                            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                            builder.setTitle("Functionality limited");
-                            builder.setMessage("Since background location access has not been granted, this app will not be able to can operate bluetooth devices.  Please go to Settings -> Applications -> Permissions and grant background location access to this app.");
-                            builder.setPositiveButton(android.R.string.ok, null);
-                            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-
-                                @Override
-                                public void onDismiss(DialogInterface dialog) {
+                            }
+                            if (Build.VERSION.SDK_INT >= 31)
+                            {
+                                Boolean bluetoothScanGranted = result.getOrDefault(Manifest.permission.BLUETOOTH_SCAN, false);
+                                Boolean bluetoothConnectGranted = result.getOrDefault(Manifest.permission.BLUETOOTH_CONNECT, false);
+                                if (Boolean.FALSE.equals(bluetoothScanGranted) | Boolean.FALSE.equals(bluetoothConnectGranted))
+                                {
+                                    buildDialogFor("Bluetooth Scanning required", "Enable Bluetooth access for this application to work properly.");
                                 }
-
-                            });
-                            builder.show();
+                            }
+                            else
+                            {
+                                Boolean bluetoothGranted = result.getOrDefault(Manifest.permission.BLUETOOTH, false);
+                                Boolean bluetoothAdminGranted = result.getOrDefault(Manifest.permission.BLUETOOTH_ADMIN, false);
+                                if (Boolean.FALSE.equals(bluetoothGranted) | Boolean.FALSE.equals(bluetoothAdminGranted))
+                                {
+                                    buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
+                                }
+                            }
+                            if (Boolean.FALSE.equals(fineLocationGranted) | Boolean.FALSE.equals(coarseLocationGranted))
+                            {
+                                buildDialogFor("Functionality Limited", "Grant fine location access to discover beacons.");
+                            }
                         }
+                );
 
-                    }
-                }
-            } else {
-                if (!this.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_BACKGROUND_LOCATION},
-                            PERMISSION_REQUEST_FINE_LOCATION);
-                } else {
-                    final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                    builder.setTitle("Functionality limited");
-                    builder.setMessage("Since location access has not been granted, this app will not be able to discover beacons.  Please go to Settings -> Applications -> Permissions and grant location access to this app.");
-                    builder.setPositiveButton(android.R.string.ok, null);
-                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+        // Before you perform the actual permission request, check whether your app
+        // already has the permissions, and whether your app needs to show a permission
+        // rationale dialog. For more details, see Request permissions. https://developer.android.com/training/permissions/requesting
+        permissionRequest.launch(new String[] {
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN
+        });
+    }
 
-                        @Override
-                        public void onDismiss(DialogInterface dialog) {
-                        }
+    private void buildDialogFor(String title, String message)
+    {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .setOnDismissListener((dialog) -> { })
+                .show();
 
-                    });
-                    builder.show();
-                }
-
-            }
-        }
     }
 
     private void requestBluetoothEnable() {
