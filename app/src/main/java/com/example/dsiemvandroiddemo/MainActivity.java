@@ -39,6 +39,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 
@@ -68,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String VP3300_RS232 = "IDTECH-VP3300-RS232";
     private static final String LANE3000_IP = "INGENICO_LANE_3000_IP";
     private static final String PAX_ANDROID_IP = "PAX_ANDROID_IP";
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private BluetoothAdapter mBtAdapter;
     private DialogInterface.OnClickListener mDeviceSelection;
     private String mConnectedDevice = "";
@@ -749,9 +752,9 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void buildDialogFor(String title, String message)
+    private AlertDialog buildDialogFor(String title, String message)
     {
-        new AlertDialog.Builder(this)
+        return new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, null)
@@ -762,7 +765,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void requestBluetoothEnable() {
         Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result ->
+            {
+                // This callback can be used to provide additional logic
+                LOGGER.info("RESULT CODE FOR INTENT " + result.getResultCode());
+                // -1 (Activity.RESULT_OK) is 'Allow'
+                // 0 (Activity.RESULT_CANCELED) is 'Deny'
+                if (result.getResultCode() == 0)
+                {
+                    buildDialogFor("Bluetooth is Not Enabled", "In order to communicate with Bluetooth devices, please turn on Bluetooth.");
+                }
+            })
+            .launch(enableBtIntent);
     }
 
     public static String getIPAddress(boolean useIPv4) {
