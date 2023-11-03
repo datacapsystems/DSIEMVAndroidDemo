@@ -688,15 +688,25 @@ public class MainActivity extends AppCompatActivity {
                 this.registerForActivityResult(new ActivityResultContracts
                                 .RequestMultiplePermissions(), result ->
                         {
-                            Boolean fineLocationGranted = result.getOrDefault(
-                                    Manifest.permission.ACCESS_FINE_LOCATION, false);
-                            Boolean coarseLocationGranted = result.getOrDefault(
-                                    Manifest.permission.ACCESS_COARSE_LOCATION,false);
+                            Boolean fineLocationGranted;
+                            Boolean coarseLocationGranted;
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                                fineLocationGranted = result.getOrDefault(
+                                        Manifest.permission.ACCESS_FINE_LOCATION, false);
+                                coarseLocationGranted = result.getOrDefault(
+                                        Manifest.permission.ACCESS_COARSE_LOCATION,false);
+                            }
+                            else
+                            {
+                                fineLocationGranted = result.get(Manifest.permission.ACCESS_FINE_LOCATION);
+                                coarseLocationGranted = result.get(Manifest.permission.ACCESS_COARSE_LOCATION);
+                            }
+
                             if (Build.VERSION.SDK_INT > 29)
                             {
                                 Boolean backgroundLocationGranted = result.getOrDefault(
                                         Manifest.permission.ACCESS_BACKGROUND_LOCATION, false);
-                                if (Boolean.FALSE.equals(backgroundLocationGranted))
+                                if (!Boolean.TRUE.equals(backgroundLocationGranted))
                                 {
                                     if (this.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED)
                                     {
@@ -718,21 +728,30 @@ public class MainActivity extends AppCompatActivity {
                             {
                                 Boolean bluetoothScanGranted = result.getOrDefault(Manifest.permission.BLUETOOTH_SCAN, false);
                                 Boolean bluetoothConnectGranted = result.getOrDefault(Manifest.permission.BLUETOOTH_CONNECT, false);
-                                if (Boolean.FALSE.equals(bluetoothScanGranted) | Boolean.FALSE.equals(bluetoothConnectGranted))
+                                if (!Boolean.TRUE.equals(bluetoothScanGranted) | !Boolean.TRUE.equals(bluetoothConnectGranted))
                                 {
                                     buildDialogFor("Bluetooth Scanning required", "Enable Bluetooth access for this application to work properly.");
                                 }
                             }
                             else
                             {
-                                Boolean bluetoothGranted = result.getOrDefault(Manifest.permission.BLUETOOTH, false);
-                                Boolean bluetoothAdminGranted = result.getOrDefault(Manifest.permission.BLUETOOTH_ADMIN, false);
-                                if (Boolean.FALSE.equals(bluetoothGranted) | Boolean.FALSE.equals(bluetoothAdminGranted))
+                                Boolean bluetoothGranted;
+                                Boolean bluetoothAdminGranted;
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                                    bluetoothGranted = result.getOrDefault(Manifest.permission.BLUETOOTH, false);
+                                    bluetoothAdminGranted = result.getOrDefault(Manifest.permission.BLUETOOTH_ADMIN, false);
+                                }
+                                else
+                                {
+                                    bluetoothGranted = result.get(Manifest.permission.BLUETOOTH);
+                                    bluetoothAdminGranted = result.get(Manifest.permission.BLUETOOTH_ADMIN);
+                                }
+                                if (!Boolean.TRUE.equals(bluetoothGranted) | !Boolean.TRUE.equals(bluetoothAdminGranted))
                                 {
                                     buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
                                 }
                             }
-                            if (Boolean.FALSE.equals(fineLocationGranted) | Boolean.FALSE.equals(coarseLocationGranted))
+                            if (!Boolean.TRUE.equals(fineLocationGranted) | !Boolean.TRUE.equals(coarseLocationGranted))
                             {
                                 buildDialogFor("Functionality Limited", "Grant fine location access to discover beacons.");
                             }
