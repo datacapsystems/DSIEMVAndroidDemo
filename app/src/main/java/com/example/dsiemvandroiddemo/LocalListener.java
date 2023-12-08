@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -35,10 +36,16 @@ public class LocalListener extends NanoHTTPD {
         if (method == Method.POST) {
             String returnMSG = "";
             try {
-                session.parseBody(files);
-                final String msg = files.get("postData");
-                Log.i("Local Listener", "Process Tran");
-                returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).ProcessTransaction(msg);
+                byte[ ] Latin1RequestArray = new byte[ session.getInputStream( ).available( ) ];
+                session.getInputStream( ).read( Latin1RequestArray );
+                String UTF8RequestMsg = new String( Latin1RequestArray, StandardCharsets.ISO_8859_1 );
+
+                if ( !UTF8RequestMsg.contains( "TransactionCancel" ) )
+                {
+                    returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).ProcessTransaction( UTF8RequestMsg );
+                } else {
+                    dsiEMVAndroidinstance.getInstance(AppContext).CancelRequest();
+                }
 
             } catch (Exception ex) {
                 Log.i("Local Listener", ex.getMessage());
