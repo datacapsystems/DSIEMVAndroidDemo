@@ -59,6 +59,7 @@ import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -628,12 +629,20 @@ public class MainActivity extends AppCompatActivity {
 
         if (mBtAdapter != null) {
             final BluetoothLeScanner mBluetoothLeScanner = mBtAdapter.getBluetoothLeScanner();
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
+                return;
+            }
             mBluetoothLeScanner.startScan(filters, settings, mScanCallback);
 
             final Runnable r = new Runnable() {
                 public void run() {
                     Handler mHandler = new Handler();
                     mHandler.postDelayed(this, 60000);
+                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                        buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
+                        return;
+                    }
                     mBluetoothLeScanner.stopScan(mScanCallback);
                 }
             };
@@ -645,6 +654,10 @@ public class MainActivity extends AppCompatActivity {
     private class BtleScanCallback extends ScanCallback {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
+            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
+                return;
+            }
             String devName = result.getDevice().getName();
             //add new device to list of available devices
             if (devName != null && !devName.equals("") && !Arrays.asList(mDeviceList).contains(devName)) {
@@ -688,42 +701,50 @@ public class MainActivity extends AppCompatActivity {
                 this.registerForActivityResult(new ActivityResultContracts
                                 .RequestMultiplePermissions(), result ->
                         {
-                            Boolean fineLocationGranted;
-                            Boolean coarseLocationGranted;
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                                fineLocationGranted = result.getOrDefault(
-                                        Manifest.permission.ACCESS_FINE_LOCATION, false);
-                                coarseLocationGranted = result.getOrDefault(
-                                        Manifest.permission.ACCESS_COARSE_LOCATION,false);
-                            }
-                            else
+                            if (Build.VERSION.SDK_INT <= 30)
                             {
-                                fineLocationGranted = result.get(Manifest.permission.ACCESS_FINE_LOCATION);
-                                coarseLocationGranted = result.get(Manifest.permission.ACCESS_COARSE_LOCATION);
-                            }
-
-                            if (Build.VERSION.SDK_INT > 29)
-                            {
-                                Boolean backgroundLocationGranted = result.getOrDefault(
-                                        Manifest.permission.ACCESS_BACKGROUND_LOCATION, false);
-                                if (!Boolean.TRUE.equals(backgroundLocationGranted))
+                                Boolean fineLocationGranted;
+                                Boolean coarseLocationGranted;
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                                    fineLocationGranted = result.getOrDefault(
+                                            Manifest.permission.ACCESS_FINE_LOCATION, false);
+                                    coarseLocationGranted = result.getOrDefault(
+                                            Manifest.permission.ACCESS_COARSE_LOCATION,false);
+                                }
+                                else
                                 {
-                                    if (this.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                                    fineLocationGranted = result.get(Manifest.permission.ACCESS_FINE_LOCATION);
+                                    coarseLocationGranted = result.get(Manifest.permission.ACCESS_COARSE_LOCATION);
+                                }
+
+                                if (Build.VERSION.SDK_INT > 29)
+                                {
+                                    Boolean backgroundLocationGranted = result.getOrDefault(
+                                            Manifest.permission.ACCESS_BACKGROUND_LOCATION, false);
+                                    if (!Boolean.TRUE.equals(backgroundLocationGranted))
                                     {
-                                        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                                        builder.setTitle("This app needs background location access");
-                                        builder.setMessage("Please grant location access so this app can operate bluetooth devices.");
-                                        builder.setPositiveButton(android.R.string.ok, null);
-                                        builder.setOnDismissListener((dialog) ->
-                                                {
-                                                    requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
-                                                            PERMISSION_REQUEST_BACKGROUND_LOCATION);
-                                                }
-                                        );
-                                        builder.show();
+                                        if (this.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                                        {
+                                            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                                            builder.setTitle("This app needs background location access");
+                                            builder.setMessage("Please grant location access so this app can operate bluetooth devices.");
+                                            builder.setPositiveButton(android.R.string.ok, null);
+                                            builder.setOnDismissListener((dialog) ->
+                                                    {
+                                                        requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                                                                PERMISSION_REQUEST_BACKGROUND_LOCATION);
+                                                    }
+                                            );
+                                            builder.show();
+                                        }
                                     }
                                 }
+                                if (!Boolean.TRUE.equals(fineLocationGranted) | !Boolean.TRUE.equals(coarseLocationGranted))
+                                {
+                                    buildDialogFor("Functionality Limited", "Grant fine location access to discover beacons.");
+                                }
                             }
+
                             if (Build.VERSION.SDK_INT >= 31)
                             {
                                 Boolean bluetoothScanGranted = result.getOrDefault(Manifest.permission.BLUETOOTH_SCAN, false);
@@ -751,24 +772,32 @@ public class MainActivity extends AppCompatActivity {
                                     buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
                                 }
                             }
-                            if (!Boolean.TRUE.equals(fineLocationGranted) | !Boolean.TRUE.equals(coarseLocationGranted))
-                            {
-                                buildDialogFor("Functionality Limited", "Grant fine location access to discover beacons.");
-                            }
                         }
                 );
 
         // Before you perform the actual permission request, check whether your app
         // already has the permissions, and whether your app needs to show a permission
         // rationale dialog. For more details, see Request permissions. https://developer.android.com/training/permissions/requesting
-        permissionRequest.launch(new String[] {
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN
-        });
+        if (Build.VERSION.SDK_INT > 30)
+        {
+            permissionRequest.launch(new String[] {
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.BLUETOOTH_ADMIN
+            });
+        }
+        else
+        {
+            permissionRequest.launch(new String[] {
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.BLUETOOTH_ADMIN
+            });
+        }
     }
 
     private AlertDialog buildDialogFor(String title, String message)
