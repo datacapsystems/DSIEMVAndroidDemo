@@ -1,6 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
+    compileSdkVersion 34
+    buildToolsVersion '34.0.0'
     defaultConfig {
         applicationId "com.example.dsiemvandroiddemo"
         minSdkVersion 23
