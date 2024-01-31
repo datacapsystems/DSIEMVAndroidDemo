@@ -678,25 +678,6 @@ public class MainActivity extends AppCompatActivity {
     private void hasPermissions()
     {
 
-        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null)
-        {
-            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Functionality limited");
-            builder.setMessage("This device does not support bluetooth. bluetooth devices cannot be communicated with");
-            builder.setPositiveButton(android.R.string.ok, null);
-            builder.setOnDismissListener(dialog -> { });
-            builder.show();
-        }
-        else if (!mBluetoothAdapter.isEnabled())
-        {
-            requestBluetoothEnable();
-        }
-        else
-        {
-            //Bluetooth enabled
-        }
-
         ActivityResultLauncher<String[]> permissionRequest =
                 this.registerForActivityResult(new ActivityResultContracts
                                 .RequestMultiplePermissions(), result ->
@@ -797,6 +778,25 @@ public class MainActivity extends AppCompatActivity {
                     Manifest.permission.BLUETOOTH,
                     Manifest.permission.BLUETOOTH_ADMIN
             });
+        }
+
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null)
+        {
+            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Functionality limited");
+            builder.setMessage("This device does not support bluetooth. bluetooth devices cannot be communicated with");
+            builder.setPositiveButton(android.R.string.ok, null);
+            builder.setOnDismissListener(dialog -> { });
+            builder.show();
+        }
+        else if (!mBluetoothAdapter.isEnabled())
+        {
+            requestBluetoothEnable();
+        }
+        else
+        {
+            //Bluetooth enabled
         }
     }
 
