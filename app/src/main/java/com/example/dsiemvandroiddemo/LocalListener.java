@@ -42,8 +42,17 @@ public class LocalListener extends NanoHTTPD {
 
                 if ( !UTF8RequestMsg.contains( "TransactionCancel" ) )
                 {
-                    returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).ProcessTransaction( UTF8RequestMsg );
-                } else {
+                    if ( UTF8RequestMsg.contains( "PlaceHolderAmount" ) )
+                    {
+                        returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).CollectCardData( UTF8RequestMsg );
+                    }
+                    else
+                    {
+                        returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).ProcessTransaction( UTF8RequestMsg );
+                    }
+                }
+                else
+                {
                     dsiEMVAndroidinstance.getInstance(AppContext).CancelRequest();
                 }
 
