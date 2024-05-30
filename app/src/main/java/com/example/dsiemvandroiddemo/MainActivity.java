@@ -381,6 +381,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(new ProcessTransactionResponseListener() {
+            @Override
+            public void OnProcessTransactionResponseChanged(final String response) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
+                            bringtofront();
+                        }
+                        TextView transactionresponseText = findViewById(R.id.transResposne);
+                        transactionresponseText.setText(response);
+                    }
+                });
+            }
+        });
+
         //get the IP of the Android Device
         String ipOfPhone = getIPAddress(true);
         TextView ipView = findViewById(R.id.ipText);
