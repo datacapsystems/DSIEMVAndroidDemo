@@ -1,3 +1,35 @@
 <resources>
     <string name="app_name">DSIEMVAndroidDemo</string>
+    <string name="connecting_to_device">Connecting to Device…</string>
+    <string name="starting_sale">Starting Sale</string>
+    <string name="running_sale">Running Sale</string>
+    <string name="starting_return">Starting Return</string>
+    <string name="running_return">Running Return</string>
+    <string name="canceled">Canceled</string>
+    <string name="canceled_transaction">Canceled Transaction</string>
+    <string name="get_device_info">Get Device Info</string>
+    <string name="emv_param_download">EMV Param Download</string>
+    <string name="connected">"Connected: "</string>
+    <string name="connected_to">"Connected to "</string>
+    <string name="could_not_connect_to_device">Could not connect to device</string>
+    <string name="disconnected">"Disconnected: "</string>
+    <string name="ip_address_of_this_device">"IP Address of This Device: "</string>
+    <string name="datacap_merchant_id">Datacap Merchant ID</string>
+    <string name="amount">Amount</string>
+    <string name="pinpad_ip_address">PinPad IP Address</string>
+    <string name="cert">Cert</string>
+    <string name="prod">Prod</string>
+    <string name="pinpad_ip_port">PinPad IP Port</string>
+    <string name="emvreturn">Return</string>
+    <string name="emvparamdownload">ParamDownload</string>
+    <string name="select_device">Select Device</string>
+    <string name="sale">Sale</string>
+    <string name="cancel">Cancel</string>
+    <string name="device_info">Device Info</string>
+    <string name="name_of_connected_device">Name of Connected Device:</string>
+    <string name="return_message_from_dsiemvandroid">Return message from DSIEMVAndroid</string>
+    <string name="transaction_raw_response">Transaction Raw Response</string>
+    <string name="datacap_systems_inc">Datacap Systems, Inc.</string>
+    <string name="collectCardData">CollectCardData</string>
+    <string name="uselastcardhint">UseLastCardID</string>
 </resources>

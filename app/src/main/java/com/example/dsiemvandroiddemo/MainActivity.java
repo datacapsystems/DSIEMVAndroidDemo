@@ -1,10 +1,5 @@
 package com.example.dsiemvandroiddemo;
 
-import com.datacap.android.BluetoothConnectionListener;
-import com.datacap.android.EstablishBluetoothConnectionResponseListener;
-import com.datacap.android.DisplayMessageListener;
-import com.datacap.android.ProcessTransactionResponseListener;
-
 import android.Manifest;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
@@ -17,12 +12,14 @@ import android.bluetooth.le.ScanSettings;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.TextView;
@@ -41,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 
@@ -58,32 +56,38 @@ import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
+import androidx.viewpager2.widget.ViewPager2;
 
 public class MainActivity extends AppCompatActivity {
 
+    private AtomicBoolean cardDataCollect = new AtomicBoolean(false);
     private final Logger LOGGER = Logger.getLogger("dsiEMVAndroidDemo");
-    private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
     private static final int PERMISSION_REQUEST_BACKGROUND_LOCATION = 2;
-    private static final int REQUEST_ENABLE_BT = 3;
     private static final String VP3300_USB = "IDTECH-VP3300-USB";
     private static final String VP3300_RS232 = "IDTECH-VP3300-RS232";
     private static final String LANE3000_IP = "INGENICO_LANE_3000_IP";
     private static final String PAX_ANDROID_IP = "PAX_ANDROID_IP";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private BluetoothAdapter mBtAdapter;
-    private DialogInterface.OnClickListener mDeviceSelection;
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private String mConnectedDevice = "";
     private int mNamePos = 1;
-    private String[] mDeviceList = {"", "", "", "", "", "", "", "", ""};
+    private final String[] mDeviceList = {"", "", "", "", "", "", "", "", ""};
     private AlertDialog mBTdialog;
     private String mOperationMode = "CERT";
+    private final SAFListener safListener = new SAFListener(getSupportFragmentManager());
 
     private static final Map<String, String> padMap;
 
-    static {
-        padMap = new HashMap<String, String>();
+    static
+    {
+        padMap = new HashMap<>();
         padMap.put("A77", "EMV_A77_DATACAP_E2E");
         padMap.put("A60", "EMV_A60_DATACAP_E2E");
         padMap.put("A920Pro", "EMV_A920PRO_DATACAP_E2E");
@@ -92,76 +96,119 @@ public class MainActivity extends AppCompatActivity {
         padMap.put("Aries8", "EMV_ARIES8_DATACAP_E2E");
         padMap.put("A35", "EMV_A35_DATACAP_E2E");
         padMap.put("A30", "EMV_A30_DATACAP_E2E");
-        padMap.put("IM30", "EMV_A920PRO_DATACAP_E2E");
+        padMap.put("IM30", "EMV_IM30_DATACAP_E2E");
+        padMap.put("A920MAX", "EMV_A920PRO_DATACAP_E2E");
+        padMap.put("A3700", "EMV_A3700_DATACAP_E2E");
+        padMap.put("A800", "EMV_A800_DATACAP_E2E");
+        padMap.put("A6650", "EMV_A6650_DATACAP_E2E");
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        ViewPager2 viewPager = findViewById(R.id.optionPager);
+        CardPagerAdapter adapter = new CardPagerAdapter(this);
+        viewPager.setAdapter(adapter);
+
+        viewPager.setOffscreenPageLimit(adapter.getItemCount());
+
+        int pageMargin = getResources().getDimensionPixelOffset(R.dimen.pageMargin);
+        int offsetPx = getResources().getDimensionPixelOffset(R.dimen.offsetPx);
+
+        viewPager.setPageTransformer((page, position) ->
+        {
+            int pageWidth = page.getWidth();
+            float pageTranslationX = -offsetPx * position;
+            if (position < -1)
+            {
+                page.setTranslationX(-pageWidth * position);
+            }
+            else if (position <= 1)
+            {
+                page.setTranslationX(pageTranslationX);
+            }
+            else
+            {
+                page.setTranslationX(0);
+            }
+        });
+
+        viewPager.addItemDecoration(new HorizontalMarginItemDecoration(pageMargin));
+
+        getSupportFragmentManager();
+//        dsiEMVAndroidinstance.getInstance(this).SetSAFEventListener(safListener);
         //check for bluetooth and location permissions for bluetooth LE to work.
         // the user must agree to location sharing because locations is part of bluetooth LE spec.
         hasPermissions();
-        try {
+        try
+        {
             //sets up local endpoint to be used with EMV US Test Client
             LocalListener li = new LocalListener(MainActivity.this);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             //could not start the local server listener
         }
 
         //setup device dialog click action
-        mDeviceSelection = new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                ListView lv = ((AlertDialog) dialog).getListView();
-                TextView v = (TextView) lv.getChildAt(which);
-                String tempName = v.getText().toString();
-                if (!tempName.equals("")) {
-                    //Skipping over all of the non bluetooth devices
-                    boolean isBluetoothName = !tempName.equals(VP3300_USB) && !tempName.equals(LANE3000_IP) && !tempName.equals(VP3300_RS232) && !tempName.equals(PAX_ANDROID_IP);
-                    if (mConnectedDevice.equals(tempName) &&
-                            (!mConnectedDevice.equals(VP3300_USB) &&
-                                    !mConnectedDevice.equals(LANE3000_IP) &&
-                                    !mConnectedDevice.equals(PAX_ANDROID_IP) &&
-                                    !mConnectedDevice.equals(VP3300_RS232)) &&
-                            isBluetoothName) {
-                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
-                        nodt.setText("Connecting to Device...");
-                        TextView transMessageView = findViewById(R.id.transMessage);
-                        transMessageView.setText("Connecting to Device...");
-                        //run the establish bluetooth connection to get the initial connection to the bluetooth device.
-                        //limited to one bluetooth device per instance of the DSIEMVAndroid control.
-                        //run in a separate thread to not block the UI.
-                        new Thread(new Runnable() {
-                            public void run() {
-                                dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
-                                dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedDevice);
-                            }
-                        }).start();
+        //Skipping over all of the non bluetooth devices
+        //run the establish bluetooth connection to get the initial connection to the bluetooth device.
+        //limited to one bluetooth device per instance of the DSIEMVAndroid control.
+        //run in a separate thread to not block the UI.
+        //A usb or IP based device needs no initial connection method, removing any previous connections here.
+        DialogInterface.OnClickListener mDeviceSelection = (dialog, which) ->
+        {
+            ListView lv = ((AlertDialog) dialog).getListView();
+            TextView v = (TextView) lv.getChildAt(which);
+            String tempName = v.getText().toString();
+            if (!tempName.isEmpty())
+            {
+                //Skipping over all of the non bluetooth devices
+                boolean isBluetoothName = !tempName.equals(VP3300_USB) && !tempName.equals(LANE3000_IP) && !tempName.equals(VP3300_RS232) && !tempName.equals(PAX_ANDROID_IP);
+                if (mConnectedDevice.equals(tempName) &&
+                        (!mConnectedDevice.equals(VP3300_USB) &&
+                                !mConnectedDevice.equals(LANE3000_IP) &&
+                                !mConnectedDevice.equals(PAX_ANDROID_IP) &&
+                                !mConnectedDevice.equals(VP3300_RS232)) &&
+                        isBluetoothName)
+                {
+                    TextView nodt = findViewById(nameOfDeviceText);
+                    nodt.setText(R.string.connecting_to_device);
+                    TextView transMessageView = findViewById(R.id.transMessage);
+                    transMessageView.setText(R.string.connecting_to_device);
+                    //run the establish bluetooth connection to get the initial connection to the bluetooth device.
+                    //limited to one bluetooth device per instance of the DSIEMVAndroid control.
+                    //run in a separate thread to not block the UI.
+                    executor.submit(() ->
+                    {
+                        dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
+                        dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedDevice);
+                    });
 
-                    } else if (isBluetoothName) {
-                        mConnectedDevice = tempName;
-                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
-                        nodt.setText("Connecting to Device...");
-                        TextView transMessageView = findViewById(R.id.transMessage);
-                        transMessageView.setText("Connecting to Device...");
-                        new Thread(new Runnable() {
-                            public void run() {
-                                dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
-                                dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedDevice);
-                            }
-                        }).start();
-                    } else {
-                        //A usb or IP based device needs no initial connection method, removing any previous connections here.
-                        mConnectedDevice = tempName;
-                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
-                        nodt.setText(mConnectedDevice);
-                        new Thread(new Runnable() {
-                            public void run() {
-                                dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
-                            }
-                        }).start();
-                    }
+                }
+                else if (isBluetoothName)
+                {
+                    mConnectedDevice = tempName;
+                    TextView nodt = findViewById(nameOfDeviceText);
+                    nodt.setText(R.string.connecting_to_device);
+                    TextView transMessageView = findViewById(R.id.transMessage);
+                    transMessageView.setText(R.string.connecting_to_device);
+                    executor.submit(() ->
+                    {
+                        dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect();
+                        dsiEMVAndroidinstance.getInstance(MainActivity.this).EstablishBluetoothConnection(mConnectedDevice);
+                    });
+                }
+                else
+                {
+                    //A usb or IP based device needs no initial connection method, removing any previous connections here.
+                    mConnectedDevice = tempName;
+                    TextView nodt = findViewById(nameOfDeviceText);
+                    nodt.setText(mConnectedDevice);
+                    new Thread(() -> dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect()).start();
                 }
             }
         };
@@ -175,241 +222,249 @@ public class MainActivity extends AppCompatActivity {
         builder.setItems(mDeviceList, mDeviceSelection);
         mBTdialog = builder.create();
 
+        viewPager.post(()->
+        {
+            // Setting defaults for params
+            ((EditText) findViewById(R.id.merchantIDText)).setText("CROSSCHAL1GD");
+            ((EditText) findViewById(R.id.IPPadtext)).setText("192.168.0.99");
+            ((EditText) findViewById(R.id.PadPorttext)).setText("1235");
+            ((EditText) findViewById(R.id.amountText)).setText("2.00");
+            ((RadioButton) findViewById(R.id.radioButtonCert)).toggle();;
+
+        });
+
         //button click listener for selecting device, brings up alert dialog
-        Button btn = (Button) findViewById(selectDevice);
-        btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        viewPager.post(()->
+        {
+            findViewById(selectDevice).setOnClickListener((v)->
+            {
                 //does a local search for  devices in discovery mode
                 searchForBt();
                 mBTdialog.show();
-            }
+            });
         });
 
-        Button salebtn = (Button) findViewById(saleButton);
-        salebtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        viewPager.post(()->
+        {
+            findViewById(saleButton).setOnClickListener((v)->
+            {
                 TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText("Starting Sale");
+                transMessageView.setText(R.string.starting_sale);
                 TextView transactionresponseText = findViewById(R.id.transResposne);
-                transactionresponseText.setText("Running Sale");
-                TextView merchIDtv = (TextView) findViewById(merchantIDText);
+                transactionresponseText.setText(R.string.running_sale);
+                TextView merchIDtv = findViewById(merchantIDText);
+                final String merchID = merchIDtv.getText().toString().strip();
+                TextView amounttv = findViewById(amountText);
+                final String amount = amounttv.getText().toString().strip();
+                TextView PainPadIptv = findViewById(IPPadtext);
+                final String padIP = PainPadIptv.getText().toString().strip();
+                TextView PadPorttexttv = findViewById(PadPorttext);
+                final String padPort = PadPorttexttv.getText().toString().strip();
+                executor.submit(()->
+                {
+                    //generates xml for running a sale
+                    String xmlRequest = setupSale(amount, merchID, padIP, padPort);
+                    //runs the sale to the connected device, this does not have to be a singleton.
+                    // It was used as a singleton here to support transactions through the local listener server.
+                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                });
+            });
+        });
+
+        viewPager.post(()->
+        {
+            findViewById(returnButton).setOnClickListener((v)->
+            {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transMessageView.setText(R.string.starting_return);
+                TextView transactionresponseText = findViewById(R.id.transResposne);
+                transactionresponseText.setText(R.string.running_return);
+                TextView merchIDtv = findViewById(merchantIDText);
                 final String merchID = merchIDtv.getText().toString();
-                TextView amounttv = (TextView) findViewById(amountText);
+                TextView amounttv = findViewById(amountText);
                 final String amount = amounttv.getText().toString();
-                TextView PainPadIptv = (TextView) findViewById(IPPadtext);
+                TextView PainPadIptv = findViewById(IPPadtext);
                 final String padIP = PainPadIptv.getText().toString();
-                TextView PadPorttexttv = (TextView) findViewById(PadPorttext);
+                TextView PadPorttexttv = findViewById(PadPorttext);
                 final String padPort = PadPorttexttv.getText().toString();
-                new Thread(new Runnable() {
-                    public void run() {
-                        //generates xml for running a sale
-                        String xmlRequest = setupSale(amount, merchID, padIP, padPort);
-                        //runs the sale to the connected device, this does not have to be a singleton.
-                        // It was used as a singleton here to support transactions through the local listener server.
-                        dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
-                    }
+                executor.submit(() ->
+                {
+                    //generates xml for running a sale
+                    String xmlRequest = setupReturn(amount, merchID, padIP, padPort);
+                    //runs the sale to the connected device
+                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
 
-                }).start();
-            }
+                });
+            });
         });
 
-        Button returnbtn = (Button) findViewById(returnButton);
-        returnbtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        viewPager.post(()->
+        {
+            findViewById(returnButton).setOnClickListener((v)->
+            {
                 TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText("Starting Return");
+                transMessageView.setText(R.string.starting_return);
                 TextView transactionresponseText = findViewById(R.id.transResposne);
-                transactionresponseText.setText("Running Return");
-                TextView merchIDtv = (TextView) findViewById(merchantIDText);
+                transactionresponseText.setText(R.string.running_return);
+                TextView merchIDtv = findViewById(merchantIDText);
                 final String merchID = merchIDtv.getText().toString();
-                TextView amounttv = (TextView) findViewById(amountText);
+                TextView amounttv = findViewById(amountText);
                 final String amount = amounttv.getText().toString();
-                TextView PainPadIptv = (TextView) findViewById(IPPadtext);
+                TextView PainPadIptv = findViewById(IPPadtext);
                 final String padIP = PainPadIptv.getText().toString();
-                TextView PadPorttexttv = (TextView) findViewById(PadPorttext);
+                TextView PadPorttexttv = findViewById(PadPorttext);
                 final String padPort = PadPorttexttv.getText().toString();
-                new Thread(new Runnable() {
-                    public void run() {
-                        //generates xml for running a sale
-                        String xmlRequest = setupReturn(amount, merchID, padIP, padPort);
-                        //runs the sale to the connected device
-                        dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                executor.submit(() ->
+                {
+                    //generates xml for running a sale
+                    String xmlRequest = setupReturn(amount, merchID, padIP, padPort);
+                    //runs the sale to the connected device
+                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
 
-                    }
-
-                }).start();
-            }
+                });
+            });
         });
-        Button cancelbtn = (Button) findViewById(cancelButton);
-        cancelbtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+
+        viewPager.post(()->
+        {
+            findViewById(cancelButton).setOnClickListener((v)->
+            {
                 TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText("Canceled Transaction");
+                transMessageView.setText(R.string.canceled_transaction);
                 TextView transactionresponseText = findViewById(R.id.transResposne);
-                transactionresponseText.setText("Canceled");
-                new Thread(new Runnable() {
-                    public void run() {
-                        //cancels any active transaction
-                        dsiEMVAndroidinstance.getInstance(MainActivity.this).CancelRequest();
-                    }
-
-                }).start();
-            }
+                transactionresponseText.setText(R.string.canceled);
+                executor.submit(() ->
+                {
+                    //cancels any active transaction
+                    dsiEMVAndroidinstance.getInstance(MainActivity.this).CancelRequest();
+                });
+            });
         });
 
-        Button gdibtn = (Button) findViewById(getDevicesInfoButton);
-        gdibtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        viewPager.post(()->
+        {
+            findViewById(getDevicesInfoButton).setOnClickListener((v)->
+            {
                 TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText("Get Device Info");
+                transMessageView.setText(R.string.get_device_info);
                 TextView transactionresponseText = findViewById(R.id.transResposne);
 
                 //gets device information
                 String response = dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDevicesInfo();
                 transactionresponseText.setText(response);
-
-            }
+            });
         });
 
-        Button emvbtn = (Button) findViewById(emvParamDownloadButton);
-        emvbtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        viewPager.post(()->
+        {
+            findViewById(emvParamDownloadButton).setOnClickListener((v)->
+            {
                 TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText("EMV Param Download");
+                transMessageView.setText(R.string.emv_param_download);
                 TextView transactionresponseText = findViewById(R.id.transResposne);
                 transactionresponseText.setText("");
-                TextView merchIDtv = (TextView) findViewById(merchantIDText);
+                TextView merchIDtv = findViewById(merchantIDText);
                 final String merchID = merchIDtv.getText().toString();
-                TextView PainPadIptv = (TextView) findViewById(IPPadtext);
+                TextView PainPadIptv = findViewById(IPPadtext);
                 final String padIP = PainPadIptv.getText().toString();
-                TextView PadPorttexttv = (TextView) findViewById(PadPorttext);
+                TextView PadPorttexttv = findViewById(PadPorttext);
                 final String padPort = PadPorttexttv.getText().toString();
-                new Thread(new Runnable() {
-                    public void run() {
+                executor.submit(() ->
+                {
 
-                        //generates xml for running a EMVParamDownload
-                        String xmlRequest = setupParamDownload(merchID, padIP, padPort);
-                        //runs the sale to the connected device
-                        dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                    //generates xml for running a EMVParamDownload
+                    String xmlRequest = setupParamDownload(merchID, padIP, padPort);
+                    //runs the sale to the connected device
+                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
 
-                    }
-
-                }).start();
-
-            }
+                });
+            });
         });
 
         //adding message listener for the VP3300, since the device has no screen the control sends messages back to the UI for card removal, etc.
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddDisplayMessageListener(new DisplayMessageListener() {
-            @Override
-            public void OnDisplayMessageChanged(final String message) {
-                //run on ui thread to set messages as they change form the control
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        TextView transMessageView = findViewById(R.id.transMessage);
-                        //get the newest message and set the text in the UI.
-                        transMessageView.setText(message);
-                    }
-                });
-            }
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddDisplayMessageListener(message ->
+        {
+            //run on ui thread to set messages as they change form the control
+            // use either a Handler to MainThread or runOnUiThread call.
+            handler.post(() ->
+            {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                //get the newest message and set the text in the UI.
+                transMessageView.setText(message);
+            });
         });
 
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddEstablishBluetoothConnectionResponseListener(new EstablishBluetoothConnectionResponseListener() {
-            @Override
-            public void OnEstablishBluetoothConnectionResponseChanged(final String response) {
-                //run on ui thread to tell user connection was successful
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
-                        TextView transResponseView = findViewById(R.id.transResposne);
-                        TextView transMessageView = findViewById(R.id.transMessage);
-                        transResponseView.setText(response);
-                        if (response.contains("Success")) {
-                            nodt.setText("Connected: " + mConnectedDevice);
-                            transMessageView.setText("Connected to " + mConnectedDevice);
-                        } else {
-                            nodt.setText("Could not connect to device");
-                            transMessageView.setText("Could not connect to device");
-                        }
-                    }
-                });
-            }
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddEstablishBluetoothConnectionResponseListener(response ->
+        {
+            //run on ui thread to tell user connection was successful
+            // use either a Handler to MainThread or runOnUiThread call.
+            handler.post(() ->
+            {
+                TextView nodt = findViewById(nameOfDeviceText);
+                TextView transResponseView = findViewById(R.id.transResposne);
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transResponseView.setText(response);
+                if (response.contains("Success")) {
+                    nodt.setText(String.format("%s%s", getString(R.string.connected), mConnectedDevice));
+                    transMessageView.setText(String.format("%s%s", getString(R.string.connected_to), mConnectedDevice));
+                } else {
+                    nodt.setText(R.string.could_not_connect_to_device);
+                    transMessageView.setText(R.string.could_not_connect_to_device);
+                }
+            });
         });
 
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddBluetoothConnectionListener(new BluetoothConnectionListener() {
-            @Override
-            public void OnBluetoothConnectionListenerChanged(final boolean isConnected) {
-                //run on ui thread to tell user connection was successful
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        TextView nodt = (TextView) findViewById(nameOfDeviceText);
-                        if (isConnected) {
-                            nodt.setText("Connected: " + mConnectedDevice);
-                        } else {
-                            nodt.setText("Disconnected: " + mConnectedDevice);
-                        }
-                    }
-                });
-            }
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddBluetoothConnectionListener(isConnected ->
+        {
+            //run on ui thread to tell user connection was successful
+            // use either a Handler to MainThread or runOnUiThread call.
+            handler.post(() ->
+            {
+                TextView nodt = findViewById(nameOfDeviceText);
+                if (isConnected) {
+                    nodt.setText(String.format("%s%s", getString(R.string.connected), mConnectedDevice));
+                } else {
+                    nodt.setText(String.format("%s%s", getString(R.string.disconnected), mConnectedDevice));
+                }
+            });
         });
 
         //adding a response listener, since the processing the transaction could happen asynchronously we added support for a response callback.
         // This call back will return the response from the active "Process Transaction" call. In this demo app it is just displayed in the UI,
         // however normally it would be serialized into an object or parsed for receipt printing and persisted to an integrators transaction database.
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddProcessTransactionResponseListener(new ProcessTransactionResponseListener() {
-            @Override
-            public void OnProcessTransactionResponseChanged(final String response) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
-                            bringtofront();
-                        }
-                        TextView transactionresponseText = findViewById(R.id.transResposne);
-                        transactionresponseText.setText(response);
-                    }
-                });
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddProcessTransactionResponseListener(response -> handler.post(() ->
+        {
+            if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
+                bringToFront();
             }
-        });
+            TextView transactionresponseText = findViewById(R.id.transResposne);
+            transactionresponseText.setText(response);
+        }));
 
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(new ProcessTransactionResponseListener() {
-            @Override
-            public void OnProcessTransactionResponseChanged(final String response) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
-                            bringtofront();
-                        }
-                        TextView transactionresponseText = findViewById(R.id.transResposne);
-                        transactionresponseText.setText(response);
-                    }
-                });
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(response -> handler.post(() ->
+        {
+            if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
+                bringToFront();
             }
-        });
+            TextView transactionresponseText = findViewById(R.id.transResposne);
+            transactionresponseText.setText(response);
+        }));
 
         //get the IP of the Android Device
         String ipOfPhone = getIPAddress(true);
         TextView ipView = findViewById(R.id.ipText);
-        ipView.setText("This Device IP: " + ipOfPhone);
+        ipView.setText(String.format("%s%s", getString(R.string.ip_address_of_this_device), ipOfPhone));
 
     }
 
-    public void onRadioButtonClicked(View view) {
+    public void onRadioButtonClicked(View view)
+    {
         // Is the button now checked?
         boolean checked = ((RadioButton) view).isChecked();
 
         // Check which radio button was clicked
-        switch (view.getId()) {
+        switch (view.getId())
+        {
             case R.id.radioButtonCert:
                 if (checked)
                     mOperationMode = "CERT";
@@ -421,211 +476,336 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private String setupSale(String amount, String merchID, String padIP, String padPort) {
+    private String setupSale(String amount, String merchID, String padIP, String padPort)
+    {
         Amount amt = new Amount(amount);
         Transaction newSale;
-        if (mConnectedDevice.equals(LANE3000_IP)) {
-            newSale = new Transaction(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVSale",
-                    "EMV_LANE3000_DATACAP_E2E",
-                    "10",
-                    amt,
-                    "0010010010",
-                    mOperationMode,
-                    "RecordNumberRequested",
-                    "1",
-                    padIP,
-                    padPort);
-        } else if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
-            newSale = new Transaction(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVSale",
-                    determineSecureDevice(),
-                    "10",
-                    amt,
-                    "0010010010",
-                    mOperationMode,
-                    "RecordNumberRequested",
-                    "1",
-                    padIP,
-                    "1235");
+        switch (mConnectedDevice)
+        {
+            case LANE3000_IP:
+                newSale = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVSale",
+                        "EMV_LANE3000_DATACAP_E2E",
+                        "10",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "1",
+                        padIP,
+                        padPort);
+                break;
+            case PAX_ANDROID_IP:
+                newSale = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVSale",
+                        determineSecureDevice(),
+                        "10",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "1",
+                        padIP,
+                        "1235");
 
-        } else if (mConnectedDevice.equals(VP3300_USB) || mConnectedDevice.equals(VP3300_RS232)) {
-            String secureDevice = "EMV_VP3300_DATACAP";
-            //RS232 takes a different secure device name
-            if (mConnectedDevice.equals(VP3300_RS232)) {
-                secureDevice = "EMV_VP3300_DATACAP_RS232";
-            }
-            newSale = new Transaction(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVSale",
-                    secureDevice,
-                    "10",
-                    amt,
-                    "0010010010",
-                    mOperationMode,
-                    "RecordNumberRequested",
-                    "1");
-        } else {
-            newSale = new Transaction(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVSale",
-                    "EMV_VP3300_DATACAP",
-                    "10",
-                    amt,
-                    "0010010010",
-                    mConnectedDevice,
-                    mOperationMode,
-                    "RecordNumberRequested",
-                    "1");
+                break;
+            case VP3300_USB:
+            case VP3300_RS232:
+                String secureDevice = "EMV_VP3300_DATACAP";
+                //RS232 takes a different secure device name
+                if (mConnectedDevice.equals(VP3300_RS232))
+                {
+                    secureDevice = "EMV_VP3300_DATACAP_RS232";
+                }
+                newSale = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVSale",
+                        secureDevice,
+                        "10",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "1");
+                break;
+            default:
+                newSale = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVSale",
+                        "EMV_VP3300_DATACAP",
+                        "10",
+                        amt,
+                        "0010010010",
+                        mConnectedDevice,
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "1");
+                break;
         }
         TStream tStream = new TStream(newSale);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
         Serializer serializer = new Persister();
-        try {
+        try
+        {
             serializer.write(tStream, bao);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             //serialization exception
         }
         return bao.toString();
     }
 
-    private String setupReturn(String amount, String merchID, String padIP, String padPort) {
+    private String setupReturn(String amount, String merchID, String padIP, String padPort)
+    {
         Amount amt = new Amount(amount);
         Transaction newReturn;
-        if (mConnectedDevice.equals(LANE3000_IP)) {
-            newReturn = new Transaction(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVReturn",
-                    "EMV_LANE3000_DATACAP_E2E",
-                    "100",
-                    amt,
-                    "0010010010",
-                    mOperationMode,
-                    "RecordNumberRequested",
-                    "23",
-                    padIP,
-                    padPort);
-        } else if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
-            newReturn = new Transaction(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVReturn",
-                    determineSecureDevice(),
-                    "10",
-                    amt,
-                    "0010010010",
-                    mOperationMode,
-                    "RecordNumberRequested",
-                    "1",
-                    padIP,
-                    "1235");
+        switch (mConnectedDevice)
+        {
+            case LANE3000_IP:
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVReturn",
+                        "EMV_LANE3000_DATACAP_E2E",
+                        "100",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "23",
+                        padIP,
+                        padPort);
+                break;
+            case PAX_ANDROID_IP:
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVReturn",
+                        determineSecureDevice(),
+                        "10",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "1",
+                        padIP,
+                        "1235");
 
-        } else if (mConnectedDevice.equals(VP3300_USB) || mConnectedDevice.equals(VP3300_RS232)) {
-            //USB connected devices need no "BluetoothDeviceName"
-            String secureDevice = "EMV_VP3300_DATACAP";
-            //RS232 takes a different secure device name
-            if (mConnectedDevice.equals(VP3300_RS232)) {
-                secureDevice = "EMV_VP3300_DATACAP_RS232";
-            }
-            newReturn = new Transaction(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVReturn",
-                    secureDevice,
-                    "100",
-                    amt,
-                    "0010010010",
-                    mOperationMode,
-                    "RecordNumberRequested",
-                    "23");
-        } else {
-            newReturn = new Transaction(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVReturn",
-                    "EMV_VP3300_DATACAP",
-                    "100",
-                    amt,
-                    "0010010010",
-                    mConnectedDevice,
-                    mOperationMode,
-                    "RecordNumberRequested",
-                    "23");
+                break;
+            case VP3300_USB:
+            case VP3300_RS232:
+                //USB connected devices need no "BluetoothDeviceName"
+                String secureDevice = "EMV_VP3300_DATACAP";
+                //RS232 takes a different secure device name
+                if (mConnectedDevice.equals(VP3300_RS232))
+                {
+                    secureDevice = "EMV_VP3300_DATACAP_RS232";
+                }
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVReturn",
+                        secureDevice,
+                        "100",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "23");
+                break;
+            default:
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVReturn",
+                        "EMV_VP3300_DATACAP",
+                        "100",
+                        amt,
+                        "0010010010",
+                        mConnectedDevice,
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "23");
+                break;
         }
         TStream tStream = new TStream(newReturn);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
         Serializer serializer = new Persister();
-        try {
+        try
+        {
             serializer.write(tStream, bao);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             //serialization exception
         }
         return bao.toString();
     }
 
-    private String setupParamDownload(String merchID, String padIP, String padPort) {
+    private String setupCollectCardData(String amount, String merchID, String padIP, String padPort)
+    {
+        String tranCode = "CollectCardData";
+        Amount amt = new Amount(amount);
+        Transaction newReturn;
+        switch (mConnectedDevice)
+        {
+            case LANE3000_IP:
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        tranCode,
+                        "EMV_LANE3000_DATACAP_E2E",
+                        "100",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "23",
+                        padIP,
+                        padPort);
+                break;
+            case PAX_ANDROID_IP:
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        tranCode,
+                        determineSecureDevice(),
+                        "10",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "1",
+                        padIP,
+                        "1235");
+
+                break;
+            case VP3300_USB:
+            case VP3300_RS232:
+                //USB connected devices need no "BluetoothDeviceName"
+                String secureDevice = "EMV_VP3300_DATACAP";
+                //RS232 takes a different secure device name
+                if (mConnectedDevice.equals(VP3300_RS232))
+                {
+                    secureDevice = "EMV_VP3300_DATACAP_RS232";
+                }
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        tranCode,
+                        secureDevice,
+                        "100",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "23");
+                break;
+            default:
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        tranCode,
+                        "EMV_VP3300_DATACAP",
+                        "100",
+                        amt,
+                        "0010010010",
+                        mConnectedDevice,
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "23");
+                break;
+        }
+        TStream tStream = new TStream(newReturn);
+
+        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+        Serializer serializer = new Persister();
+        try
+        {
+            serializer.write(tStream, bao);
+        }
+        catch (Exception ex)
+        {
+            //serialization exception
+        }
+        return bao.toString();
+    }
+
+    private String setupParamDownload(String merchID, String padIP, String padPort)
+    {
         Admin newParam;
-        if (mConnectedDevice.equals(LANE3000_IP)) {
-            newParam = new Admin(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVParamDownload",
-                    "EMV_LANE3000_DATACAP_E2E",
-                    "0010010010",
-                    mOperationMode,
-                    padIP,
-                    padPort);
-        } else if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
-            newParam = new Admin(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVParamDownload",
-                    determineSecureDevice(),
-                    "0010010010",
-                    mOperationMode,
-                    padIP,
-                    "1235");
-        } else if (mConnectedDevice.equals(VP3300_USB) || mConnectedDevice.equals(VP3300_RS232)) {
-            //USB connected devices need no "BluetoothDeviceName"
-            String secureDevice = "EMV_VP3300_DATACAP";
-            //RS232 takes a different secure device name
-            if (mConnectedDevice.equals(VP3300_RS232)) {
-                secureDevice = "EMV_VP3300_DATACAP_RS232";
-            }
-            newParam = new Admin(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVParamDownload",
-                    secureDevice,
-                    "0010010010",
-                    mOperationMode);
-        } else {
-            newParam = new Admin(merchID,
-                    "DSIEMVAndroind_Demo",
-                    "EMVUSClient:1.27",
-                    "EMVParamDownload",
-                    "EMV_VP3300_DATACAP",
-                    "0010010010",
-                    mConnectedDevice,
-                    mOperationMode);
+        switch (mConnectedDevice)
+        {
+            case LANE3000_IP:
+                newParam = new Admin(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVParamDownload",
+                        "EMV_LANE3000_DATACAP_E2E",
+                        "0010010010",
+                        mOperationMode,
+                        padIP,
+                        padPort);
+                break;
+            case PAX_ANDROID_IP:
+                newParam = new Admin(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVParamDownload",
+                        determineSecureDevice(),
+                        "0010010010",
+                        mOperationMode,
+                        padIP,
+                        "1235");
+                break;
+            case VP3300_USB:
+            case VP3300_RS232:
+                //USB connected devices need no "BluetoothDeviceName"
+                String secureDevice = "EMV_VP3300_DATACAP";
+                //RS232 takes a different secure device name
+                if (mConnectedDevice.equals(VP3300_RS232))
+                {
+                    secureDevice = "EMV_VP3300_DATACAP_RS232";
+                }
+                newParam = new Admin(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVParamDownload",
+                        secureDevice,
+                        "0010010010",
+                        mOperationMode);
+                break;
+            default:
+                newParam = new Admin(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        "EMVParamDownload",
+                        "EMV_VP3300_DATACAP",
+                        "0010010010",
+                        mConnectedDevice,
+                        mOperationMode);
+                break;
         }
 
         TStream tStream = new TStream(newParam);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
         Serializer serializer = new Persister();
-        try {
+        try
+        {
             serializer.write(tStream, bao);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             //serialization exception
         }
         return bao.toString();
@@ -633,7 +813,8 @@ public class MainActivity extends AppCompatActivity {
 
     //code to look for bluetooth le devices. This can be used to show the user a list of available devices,
     // then pass a selected device name to the DSIEMVAndroid control to connect to it.
-    private void searchForBt() {
+    private void searchForBt()
+    {
         mNamePos = 4;
         List<ScanFilter> filters = new ArrayList<>();
         ScanSettings settings = new ScanSettings.Builder()
@@ -641,49 +822,58 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         final BtleScanCallback mScanCallback = new BtleScanCallback();
         // Getting the Bluetooth adapter
-        mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+        BluetoothAdapter mBtAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        if (mBtAdapter != null) {
+        if (mBtAdapter != null)
+        {
             final BluetoothLeScanner mBluetoothLeScanner = mBtAdapter.getBluetoothLeScanner();
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)
+            {
                 buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
                 return;
             }
             mBluetoothLeScanner.startScan(filters, settings, mScanCallback);
 
-            final Runnable r = new Runnable() {
-                public void run() {
-                    Handler mHandler = new Handler();
-                    mHandler.postDelayed(this, 60000);
-                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            final Runnable r = new Runnable()
+            {
+                public void run()
+                {
+                    handler.postDelayed(this, 60000);
+                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)
+                    {
                         buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
                         return;
                     }
                     mBluetoothLeScanner.stopScan(mScanCallback);
                 }
             };
-        } else {
+        }
+        else
+        {
 
         }
     }
 
     private class BtleScanCallback extends ScanCallback {
         @Override
-        public void onScanResult(int callbackType, ScanResult result) {
+        public void onScanResult(int callbackType, ScanResult result)
+        {
             if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
                 return;
             }
             String devName = result.getDevice().getName();
             //add new device to list of available devices
-            if (devName != null && !devName.equals("") && !Arrays.asList(mDeviceList).contains(devName)) {
+            if (devName != null && !devName.isEmpty() && !Arrays.asList(mDeviceList).contains(devName))
+            {
                 mDeviceList[mNamePos] = devName;
                 ListView list = mBTdialog.getListView();
                 ArrayAdapter adapter = (ArrayAdapter) list.getAdapter();
                 //update UI that there is an additional device in the list
                 adapter.notifyDataSetChanged();
                 mNamePos++;
-                if (mNamePos > 8) {
+                if (mNamePos > 8)
+                {
                     mNamePos = 4;
                 }
             }
@@ -816,18 +1006,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private AlertDialog buildDialogFor(String title, String message)
+    private void buildDialogFor(String title, String message)
     {
-        return new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, null)
-                .setOnDismissListener((dialog) -> { })
+                .setOnDismissListener((dialog) ->
+                {
+                })
                 .show();
-
     }
 
-    private void requestBluetoothEnable() {
+    private void requestBluetoothEnable()
+    {
         Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
         registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result ->
             {
@@ -843,22 +1035,31 @@ public class MainActivity extends AppCompatActivity {
             .launch(enableBtIntent);
     }
 
-    public static String getIPAddress(boolean useIPv4) {
-        try {
+    public static String getIPAddress(boolean useIPv4)
+    {
+        try
+        {
             List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
-            for (NetworkInterface intf : interfaces) {
+            for (NetworkInterface intf : interfaces)
+            {
                 List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
-                for (InetAddress addr : addrs) {
-                    if (!addr.isLoopbackAddress()) {
+                for (InetAddress addr : addrs)
+                {
+                    if (!addr.isLoopbackAddress())
+                    {
                         String sAddr = addr.getHostAddress();
                         //boolean isIPv4 = InetAddressUtils.isIPv4Address(sAddr);
                         boolean isIPv4 = sAddr.indexOf(':') < 0;
 
-                        if (useIPv4) {
+                        if (useIPv4)
+                        {
                             if (isIPv4)
                                 return sAddr;
-                        } else {
-                            if (!isIPv4) {
+                        }
+                        else
+                        {
+                            if (!isIPv4)
+                            {
                                 int delim = sAddr.indexOf('%'); // drop ip6 zone suffix
                                 return delim < 0 ? sAddr.toUpperCase() : sAddr.substring(0, delim).toUpperCase();
                             }
@@ -866,32 +1067,98 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-        } catch (Exception ex) {
-        } // for now eat exceptions
+        }
+        catch (Exception ignored) { } // for now eat exceptions
         return "";
     }
 
-    private static String determineSecureDevice() {
+    private static String determineSecureDevice()
+    {
         String deviceModel = android.os.Build.MODEL;
         String secureDevice = padMap.get(deviceModel);
         //if secure device cant be found, treat it like an A920 Pro
-        if (secureDevice == null) {
+        if (secureDevice == null)
+        {
             secureDevice = "EMV_A920PRO_DATACAP_E2E";
         }
         return secureDevice;
     }
-    private void bringtofront()
+
+    private void bringToFront()
     {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Intent intent = new Intent(MainActivity.this.getApplicationContext(), MainActivity.this.getClass());
-                // You need this if starting
-                //  the activity from a service
-                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                startActivityIfNeeded(intent, 0);
-            }
+        handler.post(() ->
+        {
+            Intent intent = new Intent(MainActivity.this.getApplicationContext(), MainActivity.this.getClass());
+            // You need this if starting
+            //  the activity from a service
+            intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            startActivityIfNeeded(intent, 0);
         });
     }
+
+    // Assorted classes for appearances
+    public static class CardPagerAdapter extends FragmentStateAdapter
+    {
+        public CardPagerAdapter(@NonNull FragmentActivity fragmentActivity)
+        {
+            super(fragmentActivity);
+        }
+
+        @NonNull
+        @Override
+        public Fragment createFragment(int position)
+        {
+            switch (position)
+            {
+                case 0:
+                    return new ParamFragment();
+                case 1:
+                    return new TranCodeFragment();
+                default:
+                    return new ParamFragment(); // Default case
+            }
+        }
+
+        @Override
+        public int getItemCount()
+        {
+            return 2;
+        }
+
+    }
+
+    public static class ParamFragment extends Fragment
+    {
+        public ParamFragment()
+        {
+            super(R.layout.parameters_card);
+        }
+    }
+
+    public static class TranCodeFragment extends Fragment
+    {
+        public TranCodeFragment()
+        {
+            super(R.layout.trancode_card);
+        }
+    }
+
+    public static class HorizontalMarginItemDecoration extends RecyclerView.ItemDecoration
+    {
+        private final int horizontalMargin;
+
+        public HorizontalMarginItemDecoration(int horizontalMargin)
+        {
+            this.horizontalMargin = horizontalMargin;
+        }
+
+        @Override
+        public void getItemOffsets(Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state)
+        {
+            outRect.right = horizontalMargin;
+        }
+    }
+
+
 }
