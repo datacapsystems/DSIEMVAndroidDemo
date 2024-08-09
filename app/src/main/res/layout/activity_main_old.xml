@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.514"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:srcCompat="@mipmap/logo" />
+
+    <TextView
+        android:id="@+id/ipText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:text="IP Address of Device:"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toStartOf="@+id/nameOfDeviceText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageView2" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="3dp"
+        android:text="Datacap Merchant ID"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ipText" />
+
+    <EditText
+        android:id="@+id/merchantIDText"
+        android:layout_width="176dp"
+        android:layout_height="49dp"
+        android:layout_marginStart="16dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="CROSSCHAL1GD"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView3"
+        tools:text="CROSSCHAL1GD" />
+
+    <TextView
+        android:id="@+id/textView4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="Amount"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/merchantIDText" />
+
+    <TextView
+        android:id="@+id/padip_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="IP of Pad"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/amountText" />
+
+    <TextView
+        android:id="@+id/padip_text2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="Port of IP Pad"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/IPPadtext" />
+
+    <EditText
+        android:id="@+id/amountText"
+        android:layout_width="176dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="16dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="1.00"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView4"
+        tools:text="1.00" />
+
+    <EditText
+        android:id="@+id/IPPadtext"
+        android:layout_width="176dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="16dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="192.168.0.35"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/padip_text"
+        tools:text="192.168.0.35" />
+
+    <EditText
+        android:id="@+id/PadPorttext"
+        android:layout_width="176dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="64dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="12000"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/padip_text"
+        tools:text="12000" />
+
+    <TextView
+        android:id="@+id/nameOfDeviceText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Name of Connected Device: "
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/ipText"
+        app:layout_constraintTop_toBottomOf="@+id/imageView2" />
+
+    <Button
+        android:id="@+id/selectDevice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="Select Device"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/merchantIDText"
+        app:layout_constraintTop_toBottomOf="@+id/imageView2" />
+
+    <TextView
+        android:id="@+id/transMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="52dp"
+        android:isScrollContainer="true"
+        android:text="return message from DSIEMVAndroid"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.495"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/getDevicesInfoButton" />
+
+    <ScrollView
+        android:layout_width="409dp"
+        android:layout_height="455dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/transMessage">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <ProgressBar
+                android:id="@+id/safForwardAllProgressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:layout_marginEnd="32dp"
+                android:visibility="invisible" />
+
+            <TextView
+                android:id="@+id/transResposne"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Transaction raw response" />
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/saleButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Sale"
+        app:layout_constraintEnd_toStartOf="@+id/returnButton"
+        app:layout_constraintStart_toEndOf="@+id/amountText"
+        app:layout_constraintTop_toBottomOf="@+id/selectDevice" />
+
+    <Button
+        android:id="@+id/returnButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Return"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/saleButton"
+        app:layout_constraintTop_toBottomOf="@+id/selectDevice" />
+
+    <Button
+        android:id="@+id/cancelButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@android:string/cancel"
+        app:layout_constraintStart_toStartOf="@id/saleButton"
+        app:layout_constraintTop_toBottomOf="@id/saleButton" />
+
+    <Button
+        android:id="@+id/getDevicesInfoButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Device Info"
+        app:layout_constraintStart_toStartOf="@id/cancelButton"
+        app:layout_constraintTop_toBottomOf="@id/cancelButton" />
+
+    <Button
+        android:id="@+id/emvParamDownloadButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Param DL"
+        app:layout_constraintStart_toStartOf="@id/returnButton"
+        app:layout_constraintTop_toBottomOf="@id/returnButton" />
+
+    <RadioGroup
+        android:layout_width="147dp"
+        android:layout_height="41dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="19dp"
+        android:checkedButton="@id/radioButtonCert"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toEndOf="@+id/PadPorttext"
+        app:layout_constraintTop_toBottomOf="@+id/getDevicesInfoButton">
+
+        <RadioButton
+            android:id="@+id/radioButtonCert"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onRadioButtonClicked"
+            android:text="Cert" />
+
+        <RadioButton
+            android:id="@+id/radioButtonProd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onRadioButtonClicked"
+            android:text="Prod" />
+    </RadioGroup>
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="1dp"
+        android:text="Environment"
+        app:layout_constraintStart_toEndOf="@+id/PadPorttext"
+        app:layout_constraintTop_toBottomOf="@+id/getDevicesInfoButton" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
