@@ -3,26 +3,33 @@ package com.example.dsiemvandroiddemo;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Rect;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
@@ -36,12 +43,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 
+import static com.example.dsiemvandroiddemo.R.id.device_list_view;
 import static com.example.dsiemvandroiddemo.R.id.selectDevice;
 import static com.example.dsiemvandroiddemo.R.id.saleButton;
 import static com.example.dsiemvandroiddemo.R.id.returnButton;
@@ -59,13 +68,15 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+{
 
     private AtomicBoolean cardDataCollect = new AtomicBoolean(false);
     private final Logger LOGGER = Logger.getLogger("dsiEMVAndroidDemo");
@@ -78,12 +89,17 @@ public class MainActivity extends AppCompatActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String mConnectedDevice = "";
     private int mNamePos = 1;
-    private final String[] mDeviceList = {"", "", "", "", "", "", "", "", ""};
+    //    private final String[] mDeviceList = {"", "", "", "", "", "", "", "", ""};
+    private List<String> mDeviceList = new ArrayList<>();
+    String[] devicesArray = mDeviceList.toArray(new String[0]);
+    private BluetoothAdapter bluetoothAdapter;
     private AlertDialog mBTdialog;
+    private ArrayAdapter<String> listAdapter;
     private String mOperationMode = "CERT";
     private final SAFListener safListener = new SAFListener(getSupportFragmentManager());
 
     private static final Map<String, String> padMap;
+    private static final int REQUEST_PERMISSIONS = 2;
 
     static
     {
@@ -213,30 +229,48 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         //Alert dialog for selecting a device
-        mDeviceList[0] = VP3300_USB;
-        mDeviceList[1] = LANE3000_IP;
-        mDeviceList[2] = PAX_ANDROID_IP;
-        mDeviceList[3] = VP3300_RS232;
+        mDeviceList.add(VP3300_USB);
+        mDeviceList.add(LANE3000_IP);
+        mDeviceList.add(PAX_ANDROID_IP);
+        mDeviceList.add(VP3300_RS232);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.bt_scroll_view, null);
+        ListView listView = dialogView.findViewById(R.id.device_list_view);
+        // Create an ArrayAdapter
+        listAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, mDeviceList);
+        listView.setAdapter(listAdapter);
+
+        // Handle item clicks
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                mConnectedDevice = mDeviceList.get(position);
+                // Do something with the selected device
+                mBTdialog.dismiss(); // Close the dialog if desired
+            }
+        });
+
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("Choose a Device" + System.lineSeparator() + "Searching...");
-        builder.setItems(mDeviceList, mDeviceSelection);
+        builder.setView(dialogView);
         mBTdialog = builder.create();
 
-        viewPager.post(()->
+        viewPager.post(() ->
         {
             // Setting defaults for params
             ((EditText) findViewById(R.id.merchantIDText)).setText("CROSSCHAL1GD");
             ((EditText) findViewById(R.id.IPPadtext)).setText("192.168.0.99");
             ((EditText) findViewById(R.id.PadPorttext)).setText("1235");
             ((EditText) findViewById(R.id.amountText)).setText("2.00");
-            ((RadioButton) findViewById(R.id.radioButtonCert)).toggle();;
+            ((RadioButton) findViewById(R.id.radioButtonCert)).toggle();
+            ;
 
         });
 
         //button click listener for selecting device, brings up alert dialog
-        viewPager.post(()->
+        viewPager.post(() ->
         {
-            findViewById(selectDevice).setOnClickListener((v)->
+            findViewById(selectDevice).setOnClickListener((v) ->
             {
                 //does a local search for  devices in discovery mode
                 searchForBt();
@@ -244,9 +278,9 @@ public class MainActivity extends AppCompatActivity {
             });
         });
 
-        viewPager.post(()->
+        viewPager.post(() ->
         {
-            findViewById(saleButton).setOnClickListener((v)->
+            findViewById(saleButton).setOnClickListener((v) ->
             {
                 TextView transMessageView = findViewById(R.id.transMessage);
                 transMessageView.setText(R.string.starting_sale);
@@ -260,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
                 final String padIP = PainPadIptv.getText().toString().strip();
                 TextView PadPorttexttv = findViewById(PadPorttext);
                 final String padPort = PadPorttexttv.getText().toString().strip();
-                executor.submit(()->
+                executor.submit(() ->
                 {
                     //generates xml for running a sale
                     String xmlRequest = setupSale(amount, merchID, padIP, padPort);
@@ -271,9 +305,9 @@ public class MainActivity extends AppCompatActivity {
             });
         });
 
-        viewPager.post(()->
+        viewPager.post(() ->
         {
-            findViewById(returnButton).setOnClickListener((v)->
+            findViewById(returnButton).setOnClickListener((v) ->
             {
                 TextView transMessageView = findViewById(R.id.transMessage);
                 transMessageView.setText(R.string.starting_return);
@@ -298,9 +332,9 @@ public class MainActivity extends AppCompatActivity {
             });
         });
 
-        viewPager.post(()->
+        viewPager.post(() ->
         {
-            findViewById(returnButton).setOnClickListener((v)->
+            findViewById(returnButton).setOnClickListener((v) ->
             {
                 TextView transMessageView = findViewById(R.id.transMessage);
                 transMessageView.setText(R.string.starting_return);
@@ -325,14 +359,12 @@ public class MainActivity extends AppCompatActivity {
             });
         });
 
-        viewPager.post(()->
+        viewPager.post(() ->
         {
-            findViewById(cancelButton).setOnClickListener((v)->
+            findViewById(cancelButton).setOnClickListener((v) ->
             {
                 TextView transMessageView = findViewById(R.id.transMessage);
                 transMessageView.setText(R.string.canceled_transaction);
-                TextView transactionresponseText = findViewById(R.id.transResposne);
-                transactionresponseText.setText(R.string.canceled);
                 executor.submit(() ->
                 {
                     //cancels any active transaction
@@ -341,9 +373,9 @@ public class MainActivity extends AppCompatActivity {
             });
         });
 
-        viewPager.post(()->
+        viewPager.post(() ->
         {
-            findViewById(getDevicesInfoButton).setOnClickListener((v)->
+            findViewById(getDevicesInfoButton).setOnClickListener((v) ->
             {
                 TextView transMessageView = findViewById(R.id.transMessage);
                 transMessageView.setText(R.string.get_device_info);
@@ -355,9 +387,9 @@ public class MainActivity extends AppCompatActivity {
             });
         });
 
-        viewPager.post(()->
+        viewPager.post(() ->
         {
-            findViewById(emvParamDownloadButton).setOnClickListener((v)->
+            findViewById(emvParamDownloadButton).setOnClickListener((v) ->
             {
                 TextView transMessageView = findViewById(R.id.transMessage);
                 transMessageView.setText(R.string.emv_param_download);
@@ -404,10 +436,13 @@ public class MainActivity extends AppCompatActivity {
                 TextView transResponseView = findViewById(R.id.transResposne);
                 TextView transMessageView = findViewById(R.id.transMessage);
                 transResponseView.setText(response);
-                if (response.contains("Success")) {
+                if (response.contains("Success"))
+                {
                     nodt.setText(String.format("%s%s", getString(R.string.connected), mConnectedDevice));
                     transMessageView.setText(String.format("%s%s", getString(R.string.connected_to), mConnectedDevice));
-                } else {
+                }
+                else
+                {
                     nodt.setText(R.string.could_not_connect_to_device);
                     transMessageView.setText(R.string.could_not_connect_to_device);
                 }
@@ -421,9 +456,12 @@ public class MainActivity extends AppCompatActivity {
             handler.post(() ->
             {
                 TextView nodt = findViewById(nameOfDeviceText);
-                if (isConnected) {
+                if (isConnected)
+                {
                     nodt.setText(String.format("%s%s", getString(R.string.connected), mConnectedDevice));
-                } else {
+                }
+                else
+                {
                     nodt.setText(String.format("%s%s", getString(R.string.disconnected), mConnectedDevice));
                 }
             });
@@ -434,7 +472,8 @@ public class MainActivity extends AppCompatActivity {
         // however normally it would be serialized into an object or parsed for receipt printing and persisted to an integrators transaction database.
         dsiEMVAndroidinstance.getInstance(MainActivity.this).AddProcessTransactionResponseListener(response -> handler.post(() ->
         {
-            if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
+            if (mConnectedDevice.equals(PAX_ANDROID_IP))
+            {
                 bringToFront();
             }
             TextView transactionresponseText = findViewById(R.id.transResposne);
@@ -443,7 +482,8 @@ public class MainActivity extends AppCompatActivity {
 
         dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(response -> handler.post(() ->
         {
-            if (mConnectedDevice.equals(PAX_ANDROID_IP)) {
+            if (mConnectedDevice.equals(PAX_ANDROID_IP))
+            {
                 bringToFront();
             }
             TextView transactionresponseText = findViewById(R.id.transResposne);
@@ -822,61 +862,214 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         final BtleScanCallback mScanCallback = new BtleScanCallback();
         // Getting the Bluetooth adapter
-        BluetoothAdapter mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        if (mBtAdapter != null)
+        if (bluetoothAdapter != null)
         {
-            final BluetoothLeScanner mBluetoothLeScanner = mBtAdapter.getBluetoothLeScanner();
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)
-            {
-                buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
-                return;
-            }
-            mBluetoothLeScanner.startScan(filters, settings, mScanCallback);
-
-            final Runnable r = new Runnable()
-            {
-                public void run()
-                {
-                    handler.postDelayed(this, 60000);
-                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)
-                    {
-                        buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
-                        return;
-                    }
-                    mBluetoothLeScanner.stopScan(mScanCallback);
-                }
-            };
+            checkPermissions();
         }
         else
         {
-
+            Toast.makeText(this, "Bluetooth not supported", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private class BtleScanCallback extends ScanCallback {
+    private void checkPermissions()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        {
+            // Android 12 and above
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
+                    || ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+            {
+                ActivityCompat.requestPermissions(this, new String[]
+                        {
+                                Manifest.permission.BLUETOOTH_SCAN,
+                                Manifest.permission.BLUETOOTH_CONNECT
+                        }, REQUEST_PERMISSIONS);
+            }
+            else
+            {
+                startScanning();
+            }
+        }
+        else
+        {
+            // Android 6 to Android 11
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+            {
+                ActivityCompat.requestPermissions(this, new String[]
+                        {
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                        }, REQUEST_PERMISSIONS);
+            }
+            else
+            {
+                // Check if location services are enabled
+                LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                boolean isLocationEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                        || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+                if (!isLocationEnabled)
+                {
+                    Toast.makeText(this, "Please enable location services", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                }
+                else
+                {
+                    startScanning();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults)
+    {
+        if (requestCode == REQUEST_PERMISSIONS)
+        {
+            boolean allGranted = grantResults.length > 0;
+            for (int result : grantResults)
+            {
+                if (result != PackageManager.PERMISSION_GRANTED)
+                {
+                    allGranted = false;
+                    break;
+                }
+            }
+            if (allGranted)
+            {
+                startScanning();
+            }
+            else
+            {
+                Toast.makeText(this, "Permissions not granted", Toast.LENGTH_SHORT).show();
+            }
+        }
+        else
+        {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    private void startScanning()
+    {
+        // Get the BluetoothLeScanner
+        BluetoothLeScanner bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+        if (bluetoothLeScanner == null)
+        {
+            Toast.makeText(this, "Bluetooth LE Scanner not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Set up scan filters and settings
+        List<ScanFilter> filters = new ArrayList<>();
+        ScanSettings settings = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+                .build();
+
+        // Initialize ScanCallback
+        BtleScanCallback scanCallback = new BtleScanCallback();
+
+        // Start scanning
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)
+            {
+                Toast.makeText(this, "BLUETOOTH_SCAN permission required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        bluetoothLeScanner.startScan(filters, settings, scanCallback);
+
+        // Stop scanning after a pre-defined scan period
+        handler.postDelayed(() ->
+        {
+            bluetoothLeScanner.stopScan(scanCallback);
+            Toast.makeText(MainActivity.this, "Scanning stopped", Toast.LENGTH_SHORT).show();
+        }, 60000);
+    }
+
+    private class BtleScanCallback extends ScanCallback
+    {
         @Override
         public void onScanResult(int callbackType, ScanResult result)
         {
-            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                buildDialogFor("Bluetooth required", "Enable Bluetooth access for this application to work properly.");
-                return;
-            }
-            String devName = result.getDevice().getName();
-            //add new device to list of available devices
-            if (devName != null && !devName.isEmpty() && !Arrays.asList(mDeviceList).contains(devName))
+            BluetoothDevice device = result.getDevice();
+            String devName = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
             {
-                mDeviceList[mNamePos] = devName;
-                ListView list = mBTdialog.getListView();
-                ArrayAdapter adapter = (ArrayAdapter) list.getAdapter();
-                //update UI that there is an additional device in the list
-                adapter.notifyDataSetChanged();
-                mNamePos++;
-                if (mNamePos > 8)
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
                 {
-                    mNamePos = 4;
+                    devName = device.getName();
+                }
+                else
+                {
+                    devName = "Unknown Device";
                 }
             }
+            else
+            {
+                devName = device.getName();
+            }
+
+            if (devName != null && !devName.isEmpty() && !containsDevice(device))
+            {
+                Logger.getLogger("Scanner").info(String.format("Adding Device Name: %s", devName));
+                mDeviceList.add(devName);
+                listAdapter.notifyDataSetChanged();
+            }
+        }
+
+        @Override
+        public void onBatchScanResults(List<ScanResult> results)
+        {
+            for (ScanResult result : results)
+            {
+                BluetoothDevice device = result.getDevice();
+                String devName = null;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                {
+                    if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
+                    {
+                        devName = device.getName();
+                    }
+                    else
+                    {
+                        devName = "Unknown Device";
+                    }
+                }
+                else
+                {
+                    devName = device.getName();
+                }
+
+                if (devName != null && !devName.isEmpty() && !containsDevice(device))
+                {
+                    Logger.getLogger("Scanner").info(String.format("Adding Device Name: %s", devName));
+                    mDeviceList.add(devName);
+                }
+            }
+            listAdapter.notifyDataSetChanged();
+        }
+
+        @Override
+        public void onScanFailed(int errorCode)
+        {
+            Toast.makeText(MainActivity.this, "Scan failed with error: " + errorCode, Toast.LENGTH_SHORT).show();
+        }
+
+        private boolean containsDevice(BluetoothDevice device)
+        {
+            for (String d : mDeviceList)
+            {
+                if (Objects.equals(d, device.getName()))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
