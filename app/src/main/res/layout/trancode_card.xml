@@ -8,7 +8,8 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="#3653C58A">
 
         <LinearLayout
             style="?android:attr/buttonBarStyle"
@@ -89,6 +90,7 @@
                     android:text="@string/device_info" />
 
             </LinearLayout>
+
             <LinearLayout
                 style="?android:attr/buttonBarStyle"
                 android:layout_width="match_parent"
@@ -106,12 +108,12 @@
 
                 <Button
                     android:id="@+id/upcomingFeatureButton"
-                    android:visibility="invisible"
                     style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="5"
-                    android:text="@string/device_info" />
+                    android:text="@string/device_info"
+                    android:visibility="invisible" />
 
             </LinearLayout>
 

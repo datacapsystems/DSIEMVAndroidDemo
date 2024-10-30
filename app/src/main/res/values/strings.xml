@@ -5,8 +5,8 @@
     <string name="running_sale">Running Sale</string>
     <string name="starting_return">Starting Return</string>
     <string name="running_return">Running Return</string>
-    <string name="canceled">Canceled</string>
-    <string name="canceled_transaction">Canceled Transaction</string>
+    <string name="canceled">Cancel Attempted</string>
+    <string name="canceled_transaction">Cancel Attempted</string>
     <string name="get_device_info">Get Device Info</string>
     <string name="emv_param_download">EMV Param Download</string>
     <string name="connected">"Connected: "</string>
