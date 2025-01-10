@@ -14,7 +14,7 @@
     <string name="could_not_connect_to_device">Could not connect to device</string>
     <string name="disconnected">"Disconnected: "</string>
     <string name="ip_address_of_this_device">IP Address of This Device: </string>
-    <string name="datacap_merchant_id">Datacap Merchant ID</string>
+    <string name="datacap_merchant_id">NETePay Hosted MID</string>
     <string name="amount">Amount</string>
     <string name="pinpad_ip_address">PinPad IP Address</string>
     <string name="cert">Cert</string>

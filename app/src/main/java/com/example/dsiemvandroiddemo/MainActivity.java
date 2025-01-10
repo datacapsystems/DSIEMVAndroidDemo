@@ -258,13 +258,11 @@ public class MainActivity extends AppCompatActivity
         viewPager.post(() ->
         {
             // Setting defaults for params
-            ((EditText) findViewById(R.id.merchantIDText)).setText("CROSSCHAL1GD");
-            ((EditText) findViewById(R.id.IPPadtext)).setText("192.168.0.99");
-            ((EditText) findViewById(R.id.PadPorttext)).setText("1235");
-            ((EditText) findViewById(R.id.amountText)).setText("2.00");
+            //((EditText) findViewById(R.id.merchantIDText)).setText("CROSSCHAL1GD");
+            //((EditText) findViewById(R.id.IPPadtext)).setText("192.168.0.99");
+            //((EditText) findViewById(R.id.PadPorttext)).setText("1235");
+            ((EditText) findViewById(R.id.amountText)).setText("1.00");
             ((RadioButton) findViewById(R.id.radioButtonCert)).toggle();
-            ;
-
         });
 
         //button click listener for selecting device, brings up alert dialog
