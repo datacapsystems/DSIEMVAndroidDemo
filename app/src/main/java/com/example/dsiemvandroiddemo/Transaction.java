@@ -22,7 +22,42 @@ public class Transaction {
     private String PinPadIpAddress;
     private String PinPadIpPort;
 
-    public Transaction(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String invoiceNo,  Amount amount, String sequenceNo,  String bluetoothDeviceName, String operationMode, String recordNo, String refNo){
+    // Template
+    public Transaction(
+            String merchantID,
+            String pOSPackageID,
+            String tranCode,
+            String invoiceNo,
+            Amount amount,
+            String sequenceNo,
+            String operationMode,
+            String recordNo,
+            String refNo
+    ){
+        this.MerchantID = merchantID;
+        this.POSPackageID = pOSPackageID;
+        this.TranCode = tranCode;
+        this.InvoiceNo = invoiceNo;
+        this.Amount = amount;
+        this.SequenceNo = sequenceNo;
+        this.OperationMode = operationMode;
+        this.RecordNo = recordNo;
+        this.RefNo = refNo;
+    }
+    public Transaction(
+            String merchantID,
+            String userTrace,
+            String pOSPackageID,
+            String tranCode,
+            String secureDevice,
+            String invoiceNo,
+            Amount amount,
+            String sequenceNo,
+            String bluetoothDeviceName,
+            String operationMode,
+            String recordNo,
+            String refNo
+    ){
         this.MerchantID = merchantID;
         this.UserTrace = userTrace;
         this.POSPackageID = pOSPackageID;
@@ -36,7 +71,19 @@ public class Transaction {
         this.RecordNo = recordNo;
         this.RefNo = refNo;
     }
-    public Transaction(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String invoiceNo,  Amount amount, String sequenceNo, String operationMode, String recordNo, String refNo){
+    public Transaction(
+            String merchantID,
+            String userTrace,
+            String pOSPackageID,
+            String tranCode,
+            String secureDevice,
+            String invoiceNo,
+            Amount amount,
+            String sequenceNo,
+            String operationMode,
+            String recordNo,
+            String refNo
+    ){
         this.MerchantID = merchantID;
         this.UserTrace = userTrace;
         this.POSPackageID = pOSPackageID;
@@ -50,7 +97,21 @@ public class Transaction {
         this.RefNo = refNo;
     }
 
-    public Transaction(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String invoiceNo,  Amount amount, String sequenceNo, String operationMode, String recordNo, String refNo, String pinPadIpAddress, String pinPadIpPort){
+    public Transaction(
+            String merchantID,
+            String userTrace,
+            String pOSPackageID,
+            String tranCode,
+            String secureDevice,
+            String invoiceNo,
+            Amount amount,
+            String sequenceNo,
+            String operationMode,
+            String recordNo,
+            String refNo,
+            String pinPadIpAddress,
+            String pinPadIpPort
+    ){
         this.MerchantID = merchantID;
         this.UserTrace = userTrace;
         this.POSPackageID = pOSPackageID;
@@ -216,5 +277,12 @@ public class Transaction {
 
     public void setPinPadIpAddress(String pinPadIpAddress) {
         PinPadIpAddress = pinPadIpAddress;
+    }
+
+    public String getPinPadIpPort() {
+        return PinPadIpPort;
+    }
+    public void setPinPadIpPort(String pinPadIpPort) {
+        PinPadIpPort = pinPadIpPort;
     }
 }
