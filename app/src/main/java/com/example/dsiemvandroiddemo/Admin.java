@@ -13,38 +13,19 @@ public class Admin {
     private String PinPadIpAddress;
     private String PinPadIpPort;
 
-    public Admin(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String sequenceNo, String bluetoothDeviceName, String operationMode){
+    public Admin(
+            String merchantID,
+            String pOSPackageID,
+            String tranCode,
+            String sequenceNo,
+            String operationMode
+    ){
         this.MerchantID = merchantID;
-        this.UserTrace = userTrace;
         this.POSPackageID = pOSPackageID;
         this.TranCode = tranCode;
-        this.SecureDevice = secureDevice;
-        this.ComPort = "1";
-        this.SequenceNo = sequenceNo;
-        this.BluetoothDeviceName = bluetoothDeviceName;
-        this.OperationMode = operationMode;
-    }
-    public Admin(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String sequenceNo, String operationMode){
-        this.MerchantID = merchantID;
-        this.UserTrace = userTrace;
-        this.POSPackageID = pOSPackageID;
-        this.TranCode = tranCode;
-        this.SecureDevice = secureDevice;
         this.ComPort = "1";
         this.SequenceNo = sequenceNo;
         this.OperationMode = operationMode;
-    }
-    public Admin(String merchantID, String userTrace, String pOSPackageID, String tranCode, String secureDevice, String sequenceNo, String operationMode, String pinPadIpAddress, String pinPadIpPort){
-        this.MerchantID = merchantID;
-        this.UserTrace = userTrace;
-        this.POSPackageID = pOSPackageID;
-        this.TranCode = tranCode;
-        this.SecureDevice = secureDevice;
-        this.ComPort = "1";
-        this.SequenceNo = sequenceNo;
-        this.OperationMode = operationMode;
-        this.PinPadIpAddress = pinPadIpAddress;
-        this.PinPadIpPort = pinPadIpPort;
     }
 
     public String getMerchantID() {

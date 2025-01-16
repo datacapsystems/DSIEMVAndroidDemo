@@ -21,7 +21,9 @@
         android:id="@+id/padInfoLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:orientation="vertical"
         android:weightSum="10"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -29,17 +31,17 @@
 
         <TextView
             android:id="@+id/ipText"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="0dp"
             android:layout_weight="5"
             android:text="@string/ip_address_of_this_device" />
 
         <TextView
             android:id="@+id/nameOfDeviceText"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="0dp"
             android:layout_weight="5"
             android:text="@string/name_of_connected_device" />
     </LinearLayout>
