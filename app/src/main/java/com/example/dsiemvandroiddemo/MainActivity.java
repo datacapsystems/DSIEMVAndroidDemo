@@ -403,6 +403,7 @@ public class MainActivity extends AppCompatActivity
                 TextView transMessageView = findViewById(R.id.transMessage);
                 //get the newest message and set the text in the UI.
                 transMessageView.setText(message);
+                LOGGER.info("DisplayMessage: " + message);
             });
         });
 
