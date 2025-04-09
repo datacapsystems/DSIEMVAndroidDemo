@@ -22,7 +22,17 @@ public class Transaction {
     private String PinPadIpAddress;
     private String PinPadIpPort;
 
-    // Template
+    public Transaction(
+            String merchantID,
+            String pOSPackageID,
+            String tranCode,
+            String sequenceNo
+    ){
+        this.MerchantID = merchantID;
+        this.POSPackageID = pOSPackageID;
+        this.TranCode = tranCode;
+        this.SequenceNo = sequenceNo;
+    }
     public Transaction(
             String merchantID,
             String pOSPackageID,
