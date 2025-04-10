@@ -38,7 +38,6 @@ import java.io.ByteArrayOutputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -50,13 +49,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 
-import static com.example.dsiemvandroiddemo.R.id.device_list_view;
-import static com.example.dsiemvandroiddemo.R.id.selectDevice;
+//import static com.example.dsiemvandroiddemo.R.id.device_list_view;
 import static com.example.dsiemvandroiddemo.R.id.saleButton;
 import static com.example.dsiemvandroiddemo.R.id.returnButton;
 import static com.example.dsiemvandroiddemo.R.id.cancelButton;
-import static com.example.dsiemvandroiddemo.R.id.getDevicesInfoButton;
+//collect card data button?
+
+import static com.example.dsiemvandroiddemo.R.id.selectDevice;
 import static com.example.dsiemvandroiddemo.R.id.emvParamDownloadButton;
+import static com.example.dsiemvandroiddemo.R.id.getDevicesInfoButton;
+import static com.example.dsiemvandroiddemo.R.id.padResetButton;
+
 import static com.example.dsiemvandroiddemo.R.id.amountText;
 import static com.example.dsiemvandroiddemo.R.id.merchantIDText;
 import static com.example.dsiemvandroiddemo.R.id.IPPadtext;
@@ -271,17 +274,6 @@ public class MainActivity extends AppCompatActivity
             ((RadioButton) findViewById(R.id.radioButtonCert)).toggle();
         });
 
-        //button click listener for selecting device, brings up alert dialog
-        viewPager.post(() ->
-        {
-            findViewById(selectDevice).setOnClickListener((v) ->
-            {
-                //does a local search for  devices in discovery mode
-                searchForBt();
-                mBTdialog.show();
-            });
-        });
-
         viewPager.post(() ->
         {
             findViewById(saleButton).setOnClickListener((v) ->
@@ -352,17 +344,14 @@ public class MainActivity extends AppCompatActivity
             });
         });
 
+        //button click listener for selecting device, brings up alert dialog
         viewPager.post(() ->
         {
-            findViewById(getDevicesInfoButton).setOnClickListener((v) ->
+            findViewById(selectDevice).setOnClickListener((v) ->
             {
-                TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText(R.string.get_device_info);
-                TextView transactionresponseText = findViewById(R.id.transResposne);
-
-                //gets device information
-                String response = dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDevicesInfo();
-                transactionresponseText.setText(response);
+                //does a local search for  devices in discovery mode
+                searchForBt();
+                mBTdialog.show();
             });
         });
 
@@ -385,6 +374,47 @@ public class MainActivity extends AppCompatActivity
 
                     //generates xml for running a EMVParamDownload
                     String xmlRequest = setupParamDownload(merchID, padIP, padPort);
+                    LOGGER.info(xmlRequest);
+                    //runs the sale to the connected device
+                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+
+                });
+            });
+        });
+
+        viewPager.post(() ->
+        {
+            findViewById(getDevicesInfoButton).setOnClickListener((v) ->
+            {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transMessageView.setText(R.string.get_device_info);
+                TextView transactionresponseText = findViewById(R.id.transResposne);
+
+                //gets device information
+                String response = dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDevicesInfo();
+                transactionresponseText.setText(response);
+            });
+        });
+
+        viewPager.post(() ->
+        {
+            findViewById(padResetButton).setOnClickListener((v) ->
+            {
+                TextView transMessageView = findViewById(R.id.transMessage);
+                transMessageView.setText(R.string.padreset);
+                TextView transactionresponseText = findViewById(R.id.transResposne);
+                transactionresponseText.setText("");
+                TextView merchIDtv = findViewById(merchantIDText);
+                final String merchID = merchIDtv.getText().toString();
+                TextView PainPadIptv = findViewById(IPPadtext);
+                final String padIP = PainPadIptv.getText().toString();
+                TextView PadPorttexttv = findViewById(PadPorttext);
+                final String padPort = PadPorttexttv.getText().toString();
+                executor.submit(() ->
+                {
+
+                    //generates xml for running a EMVParamDownload
+                    String xmlRequest = setupPadReset(merchID, padIP, padPort);
                     LOGGER.info(xmlRequest);
                     //runs the sale to the connected device
                     dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
@@ -742,6 +772,58 @@ public class MainActivity extends AppCompatActivity
         }
 
         TStream tStream = new TStream(newParam);
+
+        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+        Serializer serializer = new Persister();
+        try
+        {
+            serializer.write(tStream, bao);
+        }
+        catch (Exception ex)
+        {
+            //serialization exception
+        }
+        return bao.toString();
+    }
+
+    private String setupPadReset(String merchID, String padIP, String padPort)
+    {
+
+        Transaction newReturn = new Transaction(
+                merchID,
+                "DSIEMVAndroidDemo:1.00",
+                "EMVPadReset",
+                "0010010010"
+        );
+
+        switch (mConnectedDevice)
+        {
+            case LANE3000_IP:
+                newReturn.setSecureDevice("EMV_LANE3000_DATACAP_E2E");
+                newReturn.setPinPadIpAddress(padIP);
+                newReturn.setPinPadIpPort(padPort);
+                break;
+            case PAX_ANDROID_IP:
+                newReturn.setSecureDevice(determineSecureDevice());
+                newReturn.setPinPadIpAddress(padIP);
+                newReturn.setPinPadIpPort("1235");
+                break;
+            case VP3300_USB:
+                newReturn.setSecureDevice("EMV_VP3300_DATACAP");
+                break;
+            case VP3300_RS232:
+                newReturn.setSecureDevice("EMV_VP3300_DATACAP_RS232");
+                break;
+            case VP3350_USB:
+                newReturn.setSecureDevice("EMV_VP3350_DATACAP");
+                break;
+            default:
+                // Must be a bluetooth device
+                newReturn.setBluetoothDeviceName(mConnectedDevice);
+                newReturn.setSecureDevice(determineSecureDeviceByBTName(mConnectedDevice));
+                break;
+        }
+        TStream tStream = new TStream(newReturn);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
         Serializer serializer = new Persister();

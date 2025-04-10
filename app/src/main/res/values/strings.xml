@@ -31,5 +31,6 @@
     <string name="transaction_raw_response">Transaction Raw Response</string>
     <string name="datacap_systems_inc">Datacap Systems, Inc.</string>
     <string name="collectCardData">CollectCardData</string>
+    <string name="padreset">EMVPadReset</string>
     <string name="uselastcardhint">UseLastCardID</string>
 </resources>
