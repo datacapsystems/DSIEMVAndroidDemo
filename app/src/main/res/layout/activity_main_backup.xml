@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:contentDescription="@string/datacap_systems_inc"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.514"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/logo" />
+
+    <LinearLayout
+        android:id="@+id/padInfoLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:orientation="vertical"
+        android:weightSum="10"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/imageView">
+
+        <TextView
+            android:id="@+id/ipText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="0dp"
+            android:layout_weight="5"
+            android:text="@string/ip_address_of_this_device" />
+
+        <TextView
+            android:id="@+id/nameOfDeviceText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="0dp"
+            android:layout_weight="5"
+            android:text="@string/name_of_connected_device" />
+    </LinearLayout>
+
+    <com.google.android.material.appbar.CollapsingToolbarLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/padInfoLayout">
+
+    </com.google.android.material.appbar.CollapsingToolbarLayout>
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/optionPager"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:clipToPadding="false"
+        android:elevation="8dp"
+        android:isScrollContainer="true"
+        android:scrollbarStyle="insideInset"
+        android:scrollIndicators="end"
+        android:scrollbarAlwaysDrawVerticalTrack="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/padInfoLayout">
+
+    </androidx.viewpager2.widget.ViewPager2>
+
+    <TextView
+        android:id="@+id/transMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="32dp"
+        android:isScrollContainer="true"
+        android:maxLines="3"
+        android:text="@string/return_message_from_dsiemvandroid"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/optionPager" />
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/transMessage">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="455dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/transResposne"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/transaction_raw_response" />
+        </LinearLayout>
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

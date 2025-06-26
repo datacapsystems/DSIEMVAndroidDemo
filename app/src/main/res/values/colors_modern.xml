@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Modern Material 3 Color Palette -->
+    
+    <!-- Primary Colors -->
+    <color name="primary">#1976D2</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#D3E4FD</color>
+    <color name="on_primary_container">#0B1929</color>
+    
+    <!-- Secondary Colors -->
+    <color name="secondary">#5D5D5D</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="secondary_container">#E2E2E2</color>
+    <color name="on_secondary_container">#191919</color>
+    
+    <!-- Tertiary Colors -->
+    <color name="tertiary">#7D5260</color>
+    <color name="on_tertiary">#FFFFFF</color>
+    <color name="tertiary_container">#FFD8E4</color>
+    <color name="on_tertiary_container">#31101D</color>
+    
+    <!-- Error Colors -->
+    <color name="error">#BA1A1A</color>
+    <color name="on_error">#FFFFFF</color>
+    <color name="error_container">#FFDAD6</color>
+    <color name="on_error_container">#410002</color>
+    
+    <!-- Surface Colors -->
+    <color name="surface">#FDFBFF</color>
+    <color name="on_surface">#1B1B1F</color>
+    <color name="surface_variant">#E1E2EC</color>
+    <color name="on_surface_variant">#44474F</color>
+    
+    <!-- Background -->
+    <color name="background">#FDFBFF</color>
+    <color name="on_background">#1B1B1F</color>
+    
+    <!-- Outline -->
+    <color name="outline">#74777F</color>
+    <color name="outline_variant">#C4C7CF</color>
+    
+    <!-- Transaction Status Colors -->
+    <color name="success_background">#E8F5E8</color>
+    <color name="success_text">#2E7D32</color>
+    
+    <color name="error_background">#FFEBEE</color>
+    <color name="error_text">#C62828</color>
+    
+    <color name="warning_background">#FFF3E0</color>
+    <color name="warning_text">#F57C00</color>
+    
+    <color name="info_background">#E3F2FD</color>
+    <color name="info_text">#1976D2</color>
+    
+    <!-- Device Connection Status -->
+    <color name="connected_green">#4CAF50</color>
+    <color name="disconnected_red">#F44336</color>
+    <color name="connecting_orange">#FF9800</color>
+    
+    <!-- Card Backgrounds -->
+    <color name="card_elevated">#FFFFFF</color>
+    <color name="card_outlined">#F5F5F5</color>
+    
+    <!-- Payment Method Colors -->
+    <color name="visa_blue">#1A1F71</color>
+    <color name="mastercard_red">#EB001B</color>
+    <color name="amex_blue">#006FCF</color>
+    <color name="discover_orange">#FF6000</color>
+    
+    <!-- Dark Theme Overrides -->
+    <color name="surface_dark">#121212</color>
+    <color name="on_surface_dark">#E1E1E1</color>
+    <color name="surface_variant_dark">#2C2C2C</color>
+    <color name="card_elevated_dark">#1E1E1E</color>
+    
+</resources>

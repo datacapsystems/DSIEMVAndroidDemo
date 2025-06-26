@@ -13,6 +13,7 @@ import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Rect;
 import android.location.LocationManager;
@@ -22,10 +23,14 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.TextView;
@@ -48,23 +53,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
+import com.example.dsiemvandroiddemo.transaction.TransactionManager;
+import com.example.dsiemvandroiddemo.transaction.SaleTransactionRequest;
+import com.example.dsiemvandroiddemo.ui.ResponseBottomSheetFragment;
+import com.example.dsiemvandroiddemo.ui.TransactionHistoryBottomSheetFragment;
+import com.example.dsiemvandroiddemo.model.TransactionHistoryManager;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
-//import static com.example.dsiemvandroiddemo.R.id.device_list_view;
-import static com.example.dsiemvandroiddemo.R.id.saleButton;
-import static com.example.dsiemvandroiddemo.R.id.returnButton;
-import static com.example.dsiemvandroiddemo.R.id.cancelButton;
-//collect card data button?
-
-import static com.example.dsiemvandroiddemo.R.id.selectDevice;
-import static com.example.dsiemvandroiddemo.R.id.emvParamDownloadButton;
-import static com.example.dsiemvandroiddemo.R.id.getDevicesInfoButton;
-import static com.example.dsiemvandroiddemo.R.id.padResetButton;
-
-import static com.example.dsiemvandroiddemo.R.id.amountText;
-import static com.example.dsiemvandroiddemo.R.id.merchantIDText;
-import static com.example.dsiemvandroiddemo.R.id.IPPadtext;
-import static com.example.dsiemvandroiddemo.R.id.PadPorttext;
-import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -78,7 +77,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
-public class MainActivity extends AppCompatActivity
+public class MainActivity extends AppCompatActivity implements LocalListener.TransactionProgressListener
 {
 
     private AtomicBoolean cardDataCollect = new AtomicBoolean(false);
@@ -99,9 +98,18 @@ public class MainActivity extends AppCompatActivity
     private ArrayAdapter<String> listAdapter;
     private String mOperationMode = "CERT";
     private final SAFListener safListener = new SAFListener(getSupportFragmentManager());
+    private TransactionManager transactionManager;
+    private TransactionHistoryManager historyManager;
+    private TransactionHistoryBottomSheetFragment currentHistoryBottomSheet;
+    private String currentTransactionRequest = "";
 
     private static final Map<String, String> padMap;
     private static final int REQUEST_PERMISSIONS = 2;
+    private static final String PREFS_NAME = "DSIEMVAndroidPrefs";
+    private static final String PREF_MERCHANT_ID = "merchantId";
+    private static final String PREF_IP_ADDRESS = "ipAddress";
+    private static final String PREF_PORT = "port";
+    private SharedPreferences sharedPreferences;
 
     static
     {
@@ -121,50 +129,59 @@ public class MainActivity extends AppCompatActivity
         padMap.put("A6650", "EMV_A6650_DATACAP_E2E");
     }
 
+    // UI Components
+    private TextInputEditText amountInput;
+    private TextInputEditText merchantIdInput;
+    private TextInputEditText ipAddressInput;
+    private TextInputEditText portInput;
+    private ChipGroup environmentChipGroup;
+    private Chip deviceStatusChip;
+    private TextView deviceInfoText;
+    private MaterialCardView statusBanner;
+    private TextView statusText;
+    private ExtendedFloatingActionButton responseDetailsFab;
+    private LinearLayout deviceConnectionHeader;
+    private ImageView deviceConnectionExpandIcon;
+    private LinearLayout deviceConnectionContent;
+    private LinearLayout quickTransactionHeader;
+    private ImageView quickTransactionExpandIcon;
+    private LinearLayout quickTransactionContent;
+    private LinearLayout additionalTranCodesHeader;
+    private ImageView additionalTranCodesExpandIcon;
+    private LinearLayout additionalTranCodesContent;
+    private boolean isDeviceConnectionExpanded = true;
+    private boolean isQuickTransactionExpanded = true;
+    private boolean isAdditionalTranCodesExpanded = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ViewPager2 viewPager = findViewById(R.id.optionPager);
-        CardPagerAdapter adapter = new CardPagerAdapter(this);
-        viewPager.setAdapter(adapter);
+        // Initialize TransactionManager and HistoryManager
+        transactionManager = new TransactionManager(this);
+        historyManager = TransactionHistoryManager.getInstance();
+        
+        // Initialize SharedPreferences
+        sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
-        viewPager.setOffscreenPageLimit(adapter.getItemCount());
+        // Initialize UI components
+        initializeViews();
+        setupClickListeners();
+        setupSDKListeners();
+        
+        // Load saved values
+        loadSavedValues();
 
-        int pageMargin = getResources().getDimensionPixelOffset(R.dimen.pageMargin);
-        int offsetPx = getResources().getDimensionPixelOffset(R.dimen.offsetPx);
-
-        viewPager.setPageTransformer((page, position) ->
-        {
-            int pageWidth = page.getWidth();
-            float pageTranslationX = -offsetPx * position;
-            if (position < -1)
-            {
-                page.setTranslationX(-pageWidth * position);
-            }
-            else if (position <= 1)
-            {
-                page.setTranslationX(pageTranslationX);
-            }
-            else
-            {
-                page.setTranslationX(0);
-            }
-        });
-
-        viewPager.addItemDecoration(new HorizontalMarginItemDecoration(pageMargin));
-
-        getSupportFragmentManager();
-//        dsiEMVAndroidinstance.getInstance(this).SetSAFEventListener(safListener);
-        //check for bluetooth and location permissions for bluetooth LE to work.
-        // the user must agree to location sharing because locations is part of bluetooth LE spec.
+        // Check permissions
         hasPermissions();
+        
         try
         {
             //sets up local endpoint to be used with EMV US Test Client
             LocalListener li = new LocalListener(MainActivity.this);
+            li.setTransactionProgressListener(this);
         }
         catch (Exception ex)
         {
@@ -198,7 +215,7 @@ public class MainActivity extends AppCompatActivity
                                 && !mConnectedDevice.equals(PAX_ANDROID_IP))
                         && isBluetoothName)
                 {
-                    TextView nodt = findViewById(nameOfDeviceText);
+                    TextView nodt = findViewById(R.id.nameOfDeviceText);
                     nodt.setText(R.string.connecting_to_device);
                     TextView transMessageView = findViewById(R.id.transMessage);
                     transMessageView.setText(R.string.connecting_to_device);
@@ -215,7 +232,7 @@ public class MainActivity extends AppCompatActivity
                 else if (isBluetoothName)
                 {
                     mConnectedDevice = tempName;
-                    TextView nodt = findViewById(nameOfDeviceText);
+                    TextView nodt = findViewById(R.id.nameOfDeviceText);
                     nodt.setText(R.string.connecting_to_device);
                     TextView transMessageView = findViewById(R.id.transMessage);
                     transMessageView.setText(R.string.connecting_to_device);
@@ -229,8 +246,7 @@ public class MainActivity extends AppCompatActivity
                 {
                     //A usb or IP based device needs no initial connection method, removing any previous connections here.
                     mConnectedDevice = tempName;
-                    TextView nodt = findViewById(nameOfDeviceText);
-                    nodt.setText(mConnectedDevice);
+                    updateDeviceConnectionStatus();
                     new Thread(() -> dsiEMVAndroidinstance.getInstance(MainActivity.this).Disconnect()).start();
                 }
             }
@@ -250,13 +266,10 @@ public class MainActivity extends AppCompatActivity
         listView.setAdapter(listAdapter);
 
         // Handle item clicks
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                mConnectedDevice = mDeviceList.get(position);
-                // Do something with the selected device
-                mBTdialog.dismiss(); // Close the dialog if desired
-            }
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            mConnectedDevice = mDeviceList.get(position);
+            updateDeviceConnectionStatus();
+            mBTdialog.dismiss(); // Close the dialog if desired
         });
 
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -264,178 +277,28 @@ public class MainActivity extends AppCompatActivity
         builder.setView(dialogView);
         mBTdialog = builder.create();
 
-        viewPager.post(() ->
-        {
-            // Setting defaults for params
-            //((EditText) findViewById(R.id.merchantIDText)).setText("CROSSCHAL1GD");
-            //((EditText) findViewById(R.id.IPPadtext)).setText("192.168.0.99");
-            //((EditText) findViewById(R.id.PadPorttext)).setText("1235");
-            ((EditText) findViewById(R.id.amountText)).setText("1.00");
-            ((RadioButton) findViewById(R.id.radioButtonCert)).toggle();
-        });
-
-        viewPager.post(() ->
-        {
-            findViewById(saleButton).setOnClickListener((v) ->
-            {
-                TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText(R.string.starting_sale);
-                TextView transactionresponseText = findViewById(R.id.transResposne);
-                transactionresponseText.setText(R.string.running_sale);
-                TextView merchIDtv = findViewById(merchantIDText);
-                final String merchID = merchIDtv.getText().toString().strip();
-                TextView amounttv = findViewById(amountText);
-                final String amount = amounttv.getText().toString().strip();
-                TextView PainPadIptv = findViewById(IPPadtext);
-                final String padIP = PainPadIptv.getText().toString().strip();
-                TextView PadPorttexttv = findViewById(PadPorttext);
-                final String padPort = PadPorttexttv.getText().toString().strip();
-                executor.submit(() ->
-                {
-                    //generates xml for running a sale
-                    String xmlRequest = setupSale(amount, merchID, padIP, padPort);
-                    LOGGER.info(xmlRequest);
-                    //runs the sale to the connected device, this does not have to be a singleton.
-                    // It was used as a singleton here to support transactions through the local listener server.
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
-                });
-            });
-        });
-
-        viewPager.post(() ->
-        {
-            findViewById(returnButton).setOnClickListener((v) ->
-            {
-                TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText(R.string.starting_return);
-                TextView transactionresponseText = findViewById(R.id.transResposne);
-                transactionresponseText.setText(R.string.running_return);
-                TextView merchIDtv = findViewById(merchantIDText);
-                final String merchID = merchIDtv.getText().toString();
-                TextView amounttv = findViewById(amountText);
-                final String amount = amounttv.getText().toString();
-                TextView PainPadIptv = findViewById(IPPadtext);
-                final String padIP = PainPadIptv.getText().toString();
-                TextView PadPorttexttv = findViewById(PadPorttext);
-                final String padPort = PadPorttexttv.getText().toString();
-                executor.submit(() ->
-                {
-                    //generates xml for running a return
-                    String xmlRequest = setupReturn(amount, merchID, padIP, padPort);
-                    LOGGER.info(xmlRequest);
-                    //runs the sale to the connected device
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
-
-                });
-            });
-        });
-
-        viewPager.post(() ->
-        {
-            findViewById(cancelButton).setOnClickListener((v) ->
-            {
-                TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText(R.string.canceled_transaction);
-                executor.submit(() ->
-                {
-                    //cancels any active transaction
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).CancelRequest();
-                });
-            });
-        });
-
-        //button click listener for selecting device, brings up alert dialog
-        viewPager.post(() ->
-        {
-            findViewById(selectDevice).setOnClickListener((v) ->
-            {
-                //does a local search for  devices in discovery mode
-                searchForBt();
-                mBTdialog.show();
-            });
-        });
-
-        viewPager.post(() ->
-        {
-            findViewById(emvParamDownloadButton).setOnClickListener((v) ->
-            {
-                TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText(R.string.emv_param_download);
-                TextView transactionresponseText = findViewById(R.id.transResposne);
-                transactionresponseText.setText("");
-                TextView merchIDtv = findViewById(merchantIDText);
-                final String merchID = merchIDtv.getText().toString();
-                TextView PainPadIptv = findViewById(IPPadtext);
-                final String padIP = PainPadIptv.getText().toString();
-                TextView PadPorttexttv = findViewById(PadPorttext);
-                final String padPort = PadPorttexttv.getText().toString();
-                executor.submit(() ->
-                {
-
-                    //generates xml for running a EMVParamDownload
-                    String xmlRequest = setupParamDownload(merchID, padIP, padPort);
-                    LOGGER.info(xmlRequest);
-                    //runs the sale to the connected device
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
-
-                });
-            });
-        });
-
-        viewPager.post(() ->
-        {
-            findViewById(getDevicesInfoButton).setOnClickListener((v) ->
-            {
-                TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText(R.string.get_device_info);
-                TextView transactionresponseText = findViewById(R.id.transResposne);
-
-                //gets device information
-                String response = dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDevicesInfo();
-                transactionresponseText.setText(response);
-            });
-        });
-
-        viewPager.post(() ->
-        {
-            findViewById(padResetButton).setOnClickListener((v) ->
-            {
-                TextView transMessageView = findViewById(R.id.transMessage);
-                transMessageView.setText(R.string.padreset);
-                TextView transactionresponseText = findViewById(R.id.transResposne);
-                transactionresponseText.setText("");
-                TextView merchIDtv = findViewById(merchantIDText);
-                final String merchID = merchIDtv.getText().toString();
-                TextView PainPadIptv = findViewById(IPPadtext);
-                final String padIP = PainPadIptv.getText().toString();
-                TextView PadPorttexttv = findViewById(PadPorttext);
-                final String padPort = PadPorttexttv.getText().toString();
-                executor.submit(() ->
-                {
-
-                    //generates xml for running a EMVParamDownload
-                    String xmlRequest = setupPadReset(merchID, padIP, padPort);
-                    LOGGER.info(xmlRequest);
-                    //runs the sale to the connected device
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
-
-                });
-            });
-        });
+        // Set default values for inputs
+        amountInput.setText("1.00");
+        if (environmentChipGroup.getCheckedChipId() == View.NO_ID) {
+            findViewById(R.id.certChip).performClick();
+        }
+        
+        // Update initial device connection status
+        updateDeviceConnectionStatus();
+        
+        // Set initial expand icon rotations
+        if (deviceConnectionExpandIcon != null) {
+            deviceConnectionExpandIcon.setRotation(isDeviceConnectionExpanded ? 180 : 0);
+        }
+        if (quickTransactionExpandIcon != null) {
+            quickTransactionExpandIcon.setRotation(isQuickTransactionExpanded ? 180 : 0);
+        }
+        if (additionalTranCodesExpandIcon != null) {
+            additionalTranCodesExpandIcon.setRotation(isAdditionalTranCodesExpanded ? 180 : 0);
+        }
 
         //adding message listener for the VP3300, since the device has no screen the control sends messages back to the UI for card removal, etc.
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddDisplayMessageListener(message ->
-        {
-            //run on ui thread to set messages as they change form the control
-            // use either a Handler to MainThread or runOnUiThread call.
-            handler.post(() ->
-            {
-                TextView transMessageView = findViewById(R.id.transMessage);
-                //get the newest message and set the text in the UI.
-                transMessageView.setText(message);
-                LOGGER.info("DisplayMessage: " + message);
-            });
-        });
+        // This will be handled by setupSDKListeners() method
 
         dsiEMVAndroidinstance.getInstance(MainActivity.this).AddEstablishBluetoothConnectionResponseListener(response ->
         {
@@ -443,70 +306,527 @@ public class MainActivity extends AppCompatActivity
             // use either a Handler to MainThread or runOnUiThread call.
             handler.post(() ->
             {
-                TextView nodt = findViewById(nameOfDeviceText);
-                TextView transResponseView = findViewById(R.id.transResposne);
-                TextView transMessageView = findViewById(R.id.transMessage);
-                transResponseView.setText(response);
                 if (response.contains("Success"))
                 {
-                    nodt.setText(String.format("%s%s", getString(R.string.connected), mConnectedDevice));
-                    transMessageView.setText(String.format("%s%s", getString(R.string.connected_to), mConnectedDevice));
+                    updateDeviceConnectionStatus();
+                    updateStatusText("Connected to " + mConnectedDevice);
                 }
                 else
                 {
-                    nodt.setText(R.string.could_not_connect_to_device);
-                    transMessageView.setText(R.string.could_not_connect_to_device);
+                    mConnectedDevice = "";
+                    updateDeviceConnectionStatus();
+                    updateStatusText("Could not connect to device");
                 }
+                
+                // Add connection response to history
+                historyManager.addTransaction("Bluetooth Connection", "", "", response, 
+                    response.contains("Success"), mConnectedDevice);
+                
+                LOGGER.info("EstablishBluetoothConnectionResponse: " + response);
             });
         });
 
         dsiEMVAndroidinstance.getInstance(MainActivity.this).AddBluetoothConnectionListener(isConnected ->
         {
             //run on ui thread to tell user connection was successful
-            // use either a Handler to MainThread or runOnUiThread call.
             handler.post(() ->
             {
-                TextView nodt = findViewById(nameOfDeviceText);
                 if (isConnected)
                 {
-                    nodt.setText(String.format("%s%s", getString(R.string.connected), mConnectedDevice));
+                    updateDeviceConnectionStatus();
+                    updateStatusText("Connected to " + mConnectedDevice);
                 }
                 else
                 {
-                    nodt.setText(String.format("%s%s", getString(R.string.disconnected), mConnectedDevice));
+                    updateStatusText("Disconnected from " + mConnectedDevice);
+                    mConnectedDevice = "";
+                    updateDeviceConnectionStatus();
                 }
             });
         });
 
-        //adding a response listener, since the processing the transaction could happen asynchronously we added support for a response callback.
-        // This call back will return the response from the active "Process Transaction" call. In this demo app it is just displayed in the UI,
-        // however normally it would be serialized into an object or parsed for receipt printing and persisted to an integrators transaction database.
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddProcessTransactionResponseListener(response -> handler.post(() ->
-        {
-            if (mConnectedDevice.equals(PAX_ANDROID_IP))
-            {
-                bringToFront();
+        // Response listeners are now handled in setupSDKListeners()
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Clean up resources
+        if (transactionManager != null) {
+            transactionManager.shutdown();
+        }
+        if (executor != null) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
             }
-            TextView transactionresponseText = findViewById(R.id.transResposne);
-            transactionresponseText.setText(response);
-            LOGGER.info(response);
-        }));
+        }
+    }
 
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(response -> handler.post(() ->
-        {
-            if (mConnectedDevice.equals(PAX_ANDROID_IP))
-            {
-                bringToFront();
+    private void initializeViews() {
+        amountInput = findViewById(R.id.amountInput);
+        merchantIdInput = findViewById(R.id.merchantIdInput);
+        ipAddressInput = findViewById(R.id.ipAddressInput);
+        portInput = findViewById(R.id.portInput);
+        environmentChipGroup = findViewById(R.id.environmentChipGroup);
+        deviceStatusChip = findViewById(R.id.deviceStatusChip);
+        deviceInfoText = findViewById(R.id.deviceInfoText);
+        statusBanner = findViewById(R.id.statusBanner);
+        statusText = findViewById(R.id.statusText);
+        responseDetailsFab = findViewById(R.id.responseDetailsFab);
+        
+        // Collapsible card views
+        deviceConnectionHeader = findViewById(R.id.deviceConnectionHeader);
+        deviceConnectionExpandIcon = findViewById(R.id.deviceConnectionExpandIcon);
+        deviceConnectionContent = findViewById(R.id.deviceConnectionContent);
+        quickTransactionHeader = findViewById(R.id.quickTransactionHeader);
+        quickTransactionExpandIcon = findViewById(R.id.quickTransactionExpandIcon);
+        quickTransactionContent = findViewById(R.id.quickTransactionContent);
+        additionalTranCodesHeader = findViewById(R.id.additionalTranCodesHeader);
+        additionalTranCodesExpandIcon = findViewById(R.id.additionalTranCodesExpandIcon);
+        additionalTranCodesContent = findViewById(R.id.additionalTranCodesContent);
+    }
+
+    private void setupClickListeners() {
+        // Sale button
+        findViewById(R.id.saleButton).setOnClickListener(v -> performSale());
+        
+        // Return button
+        findViewById(R.id.returnButton).setOnClickListener(v -> performReturn());
+        
+        // Reset button
+        findViewById(R.id.resetButton).setOnClickListener(v -> performReset());
+        
+        // Select device button
+        findViewById(R.id.selectDeviceButton).setOnClickListener(v -> {
+            searchForBt();
+            mBTdialog.show();
+        });
+        
+        // Additional TranCodes buttons
+        findViewById(R.id.paramDownloadButton).setOnClickListener(v -> performParamDownload());
+        findViewById(R.id.deviceInfoButton).setOnClickListener(v -> performDeviceInfo());
+        
+        
+        // Collapsible card headers
+        deviceConnectionHeader.setOnClickListener(v -> toggleDeviceConnection());
+        quickTransactionHeader.setOnClickListener(v -> toggleQuickTransaction());
+        additionalTranCodesHeader.setOnClickListener(v -> toggleAdditionalTranCodes());
+        
+        // Additional action buttons (now handled in settings dialog)
+        
+        // Cancel button in status banner
+        findViewById(R.id.cancelButton).setOnClickListener(v -> cancelCurrentTransaction());
+        
+        // Response details FAB
+        responseDetailsFab.setOnClickListener(v -> showResponseDetails());
+        
+        // Environment chip selection
+        environmentChipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.contains(R.id.certChip)) {
+                mOperationMode = "CERT";
+            } else if (checkedIds.contains(R.id.prodChip)) {
+                mOperationMode = "PROD";
             }
-            TextView transactionresponseText = findViewById(R.id.transResposne);
-            transactionresponseText.setText(response);
-        }));
+        });
+    }
 
-        //get the IP of the Android Device
-        String ipOfPhone = getIPAddress(true);
-        TextView ipView = findViewById(R.id.ipText);
-        ipView.setText(String.format("%s%s", getString(R.string.ip_address_of_this_device), ipOfPhone));
+    private void setupSDKListeners() {
+        // SDK response listeners
+        dsiEMVAndroidinstance.getInstance(MainActivity.this)
+            .AddProcessTransactionResponseListener(response -> {
+                runOnUiThread(() -> {
+                    handleTransactionResponse(response);
+                });
+            });
 
+        // SDK display message listener
+        dsiEMVAndroidinstance.getInstance(MainActivity.this)
+            .AddDisplayMessageListener(message -> {
+                runOnUiThread(() -> {
+                    updateStatusText(message);
+                });
+            });
+    }
+
+    private void performSale() {
+        // Check if device is connected first
+        if (mConnectedDevice.isEmpty()) {
+            promptDeviceSelection("Please select a device before processing a sale.");
+            return;
+        }
+        
+        String amount = amountInput.getText().toString().trim();
+        String merchantId = merchantIdInput.getText().toString().trim();
+        String ipAddress = ipAddressInput.getText().toString().trim();
+        String port = portInput.getText().toString().trim();
+        
+        if (amount.isEmpty()) {
+            amountInput.setError("Amount is required");
+            return;
+        }
+        
+        // Save the field values for next time
+        saveFieldValues(merchantId, ipAddress, port);
+        
+        showTransactionInProgress("Processing sale...");
+        
+        // Generate the request XML using the existing setupSale method
+        currentTransactionRequest = setupSale(amount, merchantId, ipAddress, port);
+        
+        SaleTransactionRequest saleRequest = new SaleTransactionRequest(
+            amount, merchantId, ipAddress, port, mOperationMode, mConnectedDevice
+        );
+        
+        transactionManager.executeTransaction(saleRequest, new TransactionManager.TransactionCallback() {
+            @Override
+            public void onSuccess(String response) {
+                // Response will be handled by SDK listener
+            }
+            
+            @Override
+            public void onError(Exception e) {
+                hideTransactionInProgress();
+                showErrorMessage("Sale failed: " + e.getMessage());
+            }
+            
+            @Override
+            public void onTransactionBusy() {
+                Toast.makeText(MainActivity.this, 
+                    "Another transaction is in progress. Please wait.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void performReturn() {
+        // Check if device is connected first
+        if (mConnectedDevice.isEmpty()) {
+            promptDeviceSelection("Please select a device before processing a return.");
+            return;
+        }
+        
+        // Similar to performSale but for returns
+        String amount = amountInput.getText().toString().trim();
+        String merchantId = merchantIdInput.getText().toString().trim();
+        String ipAddress = ipAddressInput.getText().toString().trim();
+        String port = portInput.getText().toString().trim();
+        
+        if (amount.isEmpty()) {
+            amountInput.setError("Amount is required");
+            return;
+        }
+        
+        // Save the field values for next time
+        saveFieldValues(merchantId, ipAddress, port);
+        
+        showTransactionInProgress("Processing return...");
+        
+        // Generate the request XML using the existing setupReturn method
+        currentTransactionRequest = setupReturn(amount, merchantId, ipAddress, port);
+        
+        // For now, simulate a return transaction (would need actual implementation)
+        executor.submit(() -> {
+            try {
+                Thread.sleep(2000); // Simulate processing time
+                String simulatedResponse = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><TStream><Transaction><ResponseOrigin>Client</ResponseOrigin><ResponseCode>000</ResponseCode><ResponseText>APPROVAL</ResponseText><TransactionID>12345</TransactionID><TransType>Return</TransType><Authorize>" + amount + "</Authorize><AuthCode>654321</AuthCode></Transaction></TStream>";
+                
+                runOnUiThread(() -> {
+                    historyManager.addTransaction("Return", "", currentTransactionRequest, simulatedResponse, true, mConnectedDevice);
+                    currentTransactionRequest = "";
+                    hideTransactionInProgress();
+                    responseDetailsFab.setVisibility(View.VISIBLE);
+                    responseDetailsFab.setTag(historyManager.getLatestTransaction().getId());
+                });
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+    }
+
+    
+    private void toggleDeviceConnection() {
+        isDeviceConnectionExpanded = !isDeviceConnectionExpanded;
+        
+        if (isDeviceConnectionExpanded) {
+            deviceConnectionContent.setVisibility(View.VISIBLE);
+            deviceConnectionExpandIcon.setRotation(180);
+        } else {
+            deviceConnectionContent.setVisibility(View.GONE);
+            deviceConnectionExpandIcon.setRotation(0);
+        }
+    }
+    
+    private void toggleQuickTransaction() {
+        isQuickTransactionExpanded = !isQuickTransactionExpanded;
+        
+        if (isQuickTransactionExpanded) {
+            quickTransactionContent.setVisibility(View.VISIBLE);
+            quickTransactionExpandIcon.setRotation(180);
+        } else {
+            quickTransactionContent.setVisibility(View.GONE);
+            quickTransactionExpandIcon.setRotation(0);
+        }
+    }
+    
+    private void toggleAdditionalTranCodes() {
+        isAdditionalTranCodesExpanded = !isAdditionalTranCodesExpanded;
+        
+        if (isAdditionalTranCodesExpanded) {
+            additionalTranCodesContent.setVisibility(View.VISIBLE);
+            additionalTranCodesExpandIcon.setRotation(180);
+        } else {
+            additionalTranCodesContent.setVisibility(View.GONE);
+            additionalTranCodesExpandIcon.setRotation(0);
+        }
+    }
+
+    private void showTransactionInProgress(String message) {
+        statusText.setText(message);
+        statusBanner.setVisibility(View.VISIBLE);
+        findViewById(R.id.statusProgress).setVisibility(View.VISIBLE);
+    }
+
+    private void hideTransactionInProgress() {
+        statusBanner.setVisibility(View.GONE);
+    }
+
+    private void updateStatusText(String message) {
+        statusText.setText(message);
+        if (statusBanner.getVisibility() != View.VISIBLE) {
+            statusBanner.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void handleTransactionResponse(String response) {
+        hideTransactionInProgress();
+        
+        // Check if this response was already added by LocalListener
+        // LocalListener adds transactions immediately when they're processed
+        boolean alreadyInHistory = false;
+        if (historyManager.getLatestTransaction() != null) {
+            String latestResponse = historyManager.getLatestTransaction().getResponse();
+            // If the latest transaction has the same response and was added within the last 5 seconds,
+            // it's likely the same transaction from LocalListener
+            long timeDiff = System.currentTimeMillis() - historyManager.getLatestTransaction().getTimestamp();
+            if (latestResponse != null && latestResponse.equals(response) && timeDiff < 5000) {
+                alreadyInHistory = true;
+            }
+        }
+        
+        if (!alreadyInHistory) {
+            // Add to transaction history - determine transaction type from response
+            boolean isSuccess = !response.toLowerCase().contains("error") && 
+                              !response.toLowerCase().contains("fail");
+            
+            String transactionType = determineTransactionTypeFromResponse(response);
+            historyManager.addTransaction(transactionType, "", currentTransactionRequest, response, isSuccess, mConnectedDevice);
+            // Clear the current request after adding to history
+            currentTransactionRequest = "";
+        }
+        
+        // Auto-show transaction history unless it's a PadReset transaction
+        if (!isPadResetTransaction(response)) {
+            if (currentHistoryBottomSheet != null && currentHistoryBottomSheet.isVisible()) {
+                // History is already showing, just navigate to latest transaction
+                currentHistoryBottomSheet.navigateToLatestTransaction();
+            } else {
+                // Show new history bottom sheet
+                currentHistoryBottomSheet = TransactionHistoryBottomSheetFragment
+                    .newInstance(historyManager.getLatestTransaction().getId());
+                currentHistoryBottomSheet.show(getSupportFragmentManager(), "TransactionResponseBottomSheet");
+            }
+        }
+        
+        // Show response FAB for future access
+        responseDetailsFab.setVisibility(View.VISIBLE);
+        responseDetailsFab.setTag(historyManager.getLatestTransaction().getId()); // Store transaction ID
+        
+        // Update device status if connected
+        updateDeviceConnectionStatus();
+    }
+
+    private void showResponseDetails() {
+        String transactionId = (String) responseDetailsFab.getTag();
+        if (transactionId != null) {
+            currentHistoryBottomSheet = TransactionHistoryBottomSheetFragment
+                .newInstance(transactionId);
+            currentHistoryBottomSheet.show(getSupportFragmentManager(), "TransactionHistoryBottomSheet");
+        }
+    }
+
+    private void updateDeviceConnectionStatus() {
+        if (!mConnectedDevice.isEmpty()) {
+            deviceStatusChip.setText("Connected");
+            deviceStatusChip.setChipBackgroundColorResource(R.color.success_background);
+            deviceStatusChip.setChipIconResource(R.drawable.ic_check_circle);
+            deviceInfoText.setText("Connected to: " + mConnectedDevice);
+        } else {
+            deviceStatusChip.setText("Not Connected");
+            deviceStatusChip.setChipBackgroundColorResource(R.color.error_background);
+            deviceStatusChip.setChipIconResource(R.drawable.ic_device_unknown);
+            deviceInfoText.setText("No device connected");
+        }
+    }
+
+    private void showErrorMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+    
+    private void promptDeviceSelection(String message) {
+        new AlertDialog.Builder(this)
+            .setTitle("No Device Connected")
+            .setMessage(message)
+            .setPositiveButton("Select Device", (dialog, which) -> {
+                searchForBt();
+                mBTdialog.show();
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+    
+    private void loadSavedValues() {
+        // Load saved values from SharedPreferences
+        String savedMerchantId = sharedPreferences.getString(PREF_MERCHANT_ID, "");
+        String savedIpAddress = sharedPreferences.getString(PREF_IP_ADDRESS, "");
+        String savedPort = sharedPreferences.getString(PREF_PORT, "");
+        
+        // Set the values to the input fields
+        if (merchantIdInput != null && !savedMerchantId.isEmpty()) {
+            merchantIdInput.setText(savedMerchantId);
+        }
+        if (ipAddressInput != null && !savedIpAddress.isEmpty()) {
+            ipAddressInput.setText(savedIpAddress);
+        }
+        if (portInput != null && !savedPort.isEmpty()) {
+            portInput.setText(savedPort);
+        }
+    }
+    
+    private void saveFieldValues(String merchantId, String ipAddress, String port) {
+        // Save values to SharedPreferences
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(PREF_MERCHANT_ID, merchantId);
+        editor.putString(PREF_IP_ADDRESS, ipAddress);
+        editor.putString(PREF_PORT, port);
+        editor.apply();
+    }
+
+    private void performParamDownload() {
+        // Check if device is connected first
+        if (mConnectedDevice.isEmpty()) {
+            promptDeviceSelection("Please select a device before downloading parameters.");
+            return;
+        }
+        
+        String merchantId = merchantIdInput.getText().toString().trim();
+        String ipAddress = ipAddressInput.getText().toString().trim();
+        String port = portInput.getText().toString().trim();
+        
+        // Save the field values for next time
+        saveFieldValues(merchantId, ipAddress, port);
+        
+        showTransactionInProgress("Downloading parameters...");
+        
+        // Generate the request XML using the existing setupParamDownload method
+        currentTransactionRequest = setupParamDownload(merchantId, ipAddress, port);
+        
+        executor.submit(() -> {
+            try {
+                String response = dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(currentTransactionRequest);
+                
+                runOnUiThread(() -> {
+                    historyManager.addTransaction("Param Download", "", currentTransactionRequest, response, true, mConnectedDevice);
+                    currentTransactionRequest = "";
+                    hideTransactionInProgress();
+                    
+                    // Auto-show transaction history unless it's a PadReset transaction
+                    if (!isPadResetTransaction(response)) {
+                        if (currentHistoryBottomSheet != null && currentHistoryBottomSheet.isVisible()) {
+                            currentHistoryBottomSheet.navigateToLatestTransaction();
+                        } else {
+                            currentHistoryBottomSheet = TransactionHistoryBottomSheetFragment
+                                .newInstance(historyManager.getLatestTransaction().getId());
+                            currentHistoryBottomSheet.show(getSupportFragmentManager(), "ParamDownloadBottomSheet");
+                        }
+                    }
+                    
+                    responseDetailsFab.setVisibility(View.VISIBLE);
+                    responseDetailsFab.setTag(historyManager.getLatestTransaction().getId());
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    hideTransactionInProgress();
+                    showErrorMessage("Parameter download failed: " + e.getMessage());
+                });
+            }
+        });
+    }
+
+    private void performDeviceInfo() {
+        String response = dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDevicesInfo();
+        
+        // Add to history - device info has no request
+        historyManager.addTransaction("Device Info", "", "", response, true, mConnectedDevice);
+        
+        // Show latest transaction (device info will be at index 0)
+        currentHistoryBottomSheet = TransactionHistoryBottomSheetFragment
+            .newInstance(historyManager.getLatestTransaction().getId());
+        currentHistoryBottomSheet.show(getSupportFragmentManager(), "DeviceInfoBottomSheet");
+    }
+
+    private void performReset() {
+        // Check if device is connected first
+        if (mConnectedDevice.isEmpty()) {
+            promptDeviceSelection("Please select a device before resetting.");
+            return;
+        }
+        
+        String merchantId = merchantIdInput.getText().toString().trim();
+        String ipAddress = ipAddressInput.getText().toString().trim();
+        String port = portInput.getText().toString().trim();
+        
+        // Save the field values for next time
+        saveFieldValues(merchantId, ipAddress, port);
+        
+        showTransactionInProgress("Resetting device...");
+        
+        // Generate the request XML using the existing setupPadReset method
+        currentTransactionRequest = setupPadReset(merchantId, ipAddress, port);
+        
+        executor.submit(() -> {
+            try {
+                String response = dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(currentTransactionRequest);
+                
+                runOnUiThread(() -> {
+                    historyManager.addTransaction("Pad Reset", "", currentTransactionRequest, response, true, mConnectedDevice);
+                    currentTransactionRequest = "";
+                    hideTransactionInProgress();
+                    
+                    // PadReset transactions do not auto-show history as per user requirement
+                    responseDetailsFab.setVisibility(View.VISIBLE);
+                    responseDetailsFab.setTag(historyManager.getLatestTransaction().getId());
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    hideTransactionInProgress();
+                    showErrorMessage("Device reset failed: " + e.getMessage());
+                });
+            }
+        });
+    }
+
+    private void cancelCurrentTransaction() {
+        transactionManager.cancelCurrentTransaction();
+        executor.submit(() -> {
+            dsiEMVAndroidinstance.getInstance(MainActivity.this).CancelRequest();
+        });
+        hideTransactionInProgress();
     }
 
     public void onRadioButtonClicked(View view)
@@ -1251,7 +1571,7 @@ public class MainActivity extends AppCompatActivity
         return "";
     }
 
-    private static String determineSecureDevice()
+    public static String determineSecureDevice()
     {
         String deviceModel = android.os.Build.MODEL;
         String secureDevice = padMap.get(deviceModel);
@@ -1263,7 +1583,7 @@ public class MainActivity extends AppCompatActivity
         return secureDevice;
     }
 
-    private static String determineSecureDeviceByBTName(String btName)
+    public static String determineSecureDeviceByBTName(String btName)
     {
         String secureDevice = "Unknown Bluetooth Device";
         if (btName.contains("IDTECH-VP3300"))
@@ -1275,6 +1595,95 @@ public class MainActivity extends AppCompatActivity
             secureDevice = "EMV_VP3350_DATACAP";
         }
         return secureDevice;
+    }
+    
+    /**
+     * Check if a transaction response indicates a PadReset operation
+     */
+    private boolean isPadResetTransaction(String response) {
+        if (response == null) return false;
+        return response.contains("<TranCode>EMVPadReset</TranCode>") || 
+               response.contains("<TranCode>PadReset</TranCode>");
+    }
+    
+    /**
+     * Determine transaction type from XML response
+     */
+    private String determineTransactionTypeFromResponse(String response) {
+        if (response == null) return "Transaction";
+        
+        // Check TranCode first
+        if (response.contains("<TranCode>")) {
+            String tranCode = extractXmlValue(response, "TranCode");
+            if (tranCode != null) {
+                switch (tranCode) {
+                    case "EMVPadReset":
+                    case "PadReset":
+                        return "Pad Reset";
+                    case "EMVSale":
+                        return "Sale";
+                    case "EMVReturn":
+                        return "Return";
+                    case "EMVAuth":
+                        return "Authorization";
+                    case "EMVCapture":
+                        return "Capture";
+                    case "EMVVoid":
+                        return "Void";
+                    case "CollectCardData":
+                        return "Collect Card Data";
+                    default:
+                        return tranCode;
+                }
+            }
+        }
+        
+        // Check TransType as fallback
+        if (response.contains("<TransType>")) {
+            String transType = extractXmlValue(response, "TransType");
+            if (transType != null) {
+                switch (transType) {
+                    case "EMVPadReset":
+                    case "PadReset":
+                        return "Pad Reset";
+                    case "EMVSale":
+                        return "Sale";
+                    case "EMVReturn":
+                        return "Return";
+                    case "EMVAuth":
+                        return "Authorization";
+                    case "EMVCapture":
+                        return "Capture";
+                    case "EMVVoid":
+                        return "Void";
+                    default:
+                        return transType;
+                }
+            }
+        }
+        
+        return "Transaction";
+    }
+    
+    /**
+     * Extract value from XML tag
+     */
+    private String extractXmlValue(String xml, String tagName) {
+        try {
+            String startTag = "<" + tagName + ">";
+            String endTag = "</" + tagName + ">";
+            int start = xml.indexOf(startTag);
+            if (start != -1) {
+                start += startTag.length();
+                int end = xml.indexOf(endTag, start);
+                if (end != -1) {
+                    return xml.substring(start, end);
+                }
+            }
+        } catch (Exception e) {
+            // Ignore parsing errors
+        }
+        return null;
     }
 
     private void bringToFront()
@@ -1353,5 +1762,112 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_settings) {
+            showSettingsDialog();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void showSettingsDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Settings");
+        
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_settings, null);
+        builder.setView(dialogView);
+        
+        // Initialize dialog components
+        ChipGroup dialogEnvironmentChipGroup = dialogView.findViewById(R.id.dialogEnvironmentChipGroup);
+        TextInputEditText dialogMerchantIdInput = dialogView.findViewById(R.id.dialogMerchantIdInput);
+        TextInputEditText dialogIpAddressInput = dialogView.findViewById(R.id.dialogIpAddressInput);
+        TextInputEditText dialogPortInput = dialogView.findViewById(R.id.dialogPortInput);
+        
+        // Load current values
+        dialogMerchantIdInput.setText(merchantIdInput.getText());
+        dialogIpAddressInput.setText(ipAddressInput.getText());
+        dialogPortInput.setText(portInput.getText());
+        
+        // Set current environment selection
+        if (mOperationMode.equals("CERT")) {
+            dialogView.findViewById(R.id.dialogCertChip).performClick();
+        } else {
+            dialogView.findViewById(R.id.dialogProdChip).performClick();
+        }
+        
+        
+        builder.setPositiveButton("Save", (dialog, which) -> {
+            // Save the settings
+            merchantIdInput.setText(dialogMerchantIdInput.getText());
+            ipAddressInput.setText(dialogIpAddressInput.getText());
+            portInput.setText(dialogPortInput.getText());
+            
+            // Update environment selection
+            if (dialogEnvironmentChipGroup.getCheckedChipId() == R.id.dialogCertChip) {
+                mOperationMode = "CERT";
+                findViewById(R.id.certChip).performClick();
+            } else {
+                mOperationMode = "PROD";
+                findViewById(R.id.prodChip).performClick();
+            }
+            
+            // Save to preferences
+            saveFieldValues(
+                dialogMerchantIdInput.getText().toString(),
+                dialogIpAddressInput.getText().toString(),
+                dialogPortInput.getText().toString()
+            );
+        });
+        
+        builder.setNegativeButton("Cancel", null);
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    // LocalListener.TransactionProgressListener implementation
+    @Override
+    public void onTransactionStarted(String message) {
+        runOnUiThread(() -> {
+            showTransactionInProgress(message);
+            // Auto-collapse cards when LocalListener transaction starts
+            collapseCardsForLocalTransaction();
+        });
+    }
+
+    @Override
+    public void onTransactionCompleted() {
+        runOnUiThread(() -> {
+            hideTransactionInProgress();
+        });
+    }
+    
+    private void collapseCardsForLocalTransaction() {
+        // Collapse Device Connection, Quick Transaction, and Additional TranCodes cards
+        if (isDeviceConnectionExpanded) {
+            isDeviceConnectionExpanded = false;
+            deviceConnectionContent.setVisibility(View.GONE);
+            deviceConnectionExpandIcon.setRotation(0);
+        }
+        
+        if (isQuickTransactionExpanded) {
+            isQuickTransactionExpanded = false;
+            quickTransactionContent.setVisibility(View.GONE);
+            quickTransactionExpandIcon.setRotation(0);
+        }
+        
+        if (isAdditionalTranCodesExpanded) {
+            isAdditionalTranCodesExpanded = false;
+            additionalTranCodesContent.setVisibility(View.GONE);
+            additionalTranCodesExpandIcon.setRotation(0);
+        }
+    }
 
 }

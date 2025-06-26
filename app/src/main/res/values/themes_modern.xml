@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Modern Material 3 Theme -->
+    <style name="Theme.DSIEMVAndroidDemo.Modern" parent="Theme.Material3.DayNight">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
+
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/on_secondary</item>
+        <item name="colorSecondaryContainer">@color/secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
+
+        <!-- Tertiary brand color -->
+        <item name="colorTertiary">@color/tertiary</item>
+        <item name="colorOnTertiary">@color/on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/on_tertiary_container</item>
+
+        <!-- Error color -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/on_error</item>
+        <item name="colorErrorContainer">@color/error_container</item>
+        <item name="colorOnErrorContainer">@color/on_error_container</item>
+
+        <!-- Surface colors -->
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+
+        <!-- Background -->
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorOnBackground">@color/on_background</item>
+
+        <!-- Outline -->
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorOutlineVariant">@color/outline_variant</item>
+
+        <!-- Custom app styling -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        
+        <!-- Enable edge-to-edge -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:fitsSystemWindows">false</item>
+    </style>
+
+    <!-- Dark theme variant -->
+    <style name="Theme.DSIEMVAndroidDemo.Modern.Dark" parent="Theme.Material3.DayNight">
+        <!-- Override specific dark theme values here if needed -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- Transaction Status Styles -->
+    <style name="TransactionStatus">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceLabelMedium</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:background">@drawable/rounded_background</item>
+    </style>
+
+    <style name="TransactionStatus.Success">
+        <item name="android:textColor">@color/success_text</item>
+        <item name="android:backgroundTint">@color/success_background</item>
+    </style>
+
+    <style name="TransactionStatus.Error">
+        <item name="android:textColor">@color/error_text</item>
+        <item name="android:backgroundTint">@color/error_background</item>
+    </style>
+
+    <style name="TransactionStatus.Processing">
+        <item name="android:textColor">@color/warning_text</item>
+        <item name="android:backgroundTint">@color/warning_background</item>
+    </style>
+
+    <!-- Card Styles -->
+    <style name="Card.Transaction" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
+        <item name="android:layout_margin">8dp</item>
+    </style>
+
+    <!-- Button Styles -->
+    <style name="Button.Primary" parent="Widget.Material3.Button.UnelevatedButton">
+        <item name="android:minHeight">56dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconPadding">8dp</item>
+    </style>
+
+    <style name="Button.Secondary" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconPadding">8dp</item>
+    </style>
+
+    <!-- Text Input Styles -->
+    <style name="TextInput.Modern" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+    </style>
+
+</resources>

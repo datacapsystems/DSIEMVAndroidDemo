@@ -10,19 +10,21 @@ public class dsiEMVAndroidinstance
 
     public static dsiEMVAndroid getInstance(Context context)
     {
-        if (instance == null)
+        // Double-checked locking with volatile instance field
+        dsiEMVAndroid localInstance = instance;
+        if (localInstance == null)
         {
-            synchronized (dsiEMVAndroid.class)
+            synchronized (dsiEMVAndroidinstance.class)
             {
-                if(instance == null)
+                localInstance = instance;
+                if(localInstance == null)
                 {
-                    instance = new dsiEMVAndroid(context);
+                    // Use application context to avoid memory leaks
+                    instance = localInstance = new dsiEMVAndroid(context.getApplicationContext());
                 }
-
             }
-
         }
-        return instance;
+        return localInstance;
     }
 
 }

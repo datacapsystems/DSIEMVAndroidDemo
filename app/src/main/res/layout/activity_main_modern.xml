@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <!-- App Bar with modern styling -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:elevation="0dp"
+        app:liftOnScroll="true">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:titleTextColor="?attr/colorOnSurface"
+            style="@style/Widget.Material3.Toolbar.OnSurface" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Main content with NestedScrollView for smooth scrolling -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Connection Status Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                style="@style/Widget.Material3.CardView.Elevated">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Device Connection"
+                        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/deviceStatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Not Connected"
+                            app:chipIcon="@drawable/ic_device_unknown"
+                            app:chipBackgroundColor="?attr/colorErrorContainer"
+                            style="@style/Widget.Material3.Chip.Assist" />
+
+                        <Space
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/selectDeviceButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Select Device"
+                            app:icon="@drawable/ic_bluetooth"
+                            style="@style/Widget.Material3.Button.TonalButton" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/deviceInfoText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="No device connected"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Quick Transaction Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                style="@style/Widget.Material3.CardView.Elevated">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Quick Transaction"
+                        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <!-- Amount Input with better UX -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:hint="Amount"
+                        app:prefixText="$"
+                        app:helperText="Enter transaction amount"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/amountInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="1.00"
+                            android:inputType="numberDecimal" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Primary Actions -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/saleButton"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="8dp"
+                            android:text="Sale"
+                            app:icon="@drawable/ic_payment"
+                            style="@style/Widget.Material3.Button.UnelevatedButton" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/returnButton"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="Return"
+                            app:icon="@drawable/ic_undo"
+                            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Advanced Options - Collapsible -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                style="@style/Widget.Material3.CardView.Elevated">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header with expand/collapse -->
+                    <LinearLayout
+                        android:id="@+id/advancedHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Advanced Options"
+                            android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                            android:textColor="?attr/colorOnSurface" />
+
+                        <ImageView
+                            android:id="@+id/expandIcon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_expand_more"
+                            android:tint="?attr/colorOnSurfaceVariant" />
+
+                    </LinearLayout>
+
+                    <!-- Expandable content -->
+                    <LinearLayout
+                        android:id="@+id/advancedContent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:hint="Merchant ID"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/merchantIdInput"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <!-- Environment Selection -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="Environment"
+                            android:textAppearance="?attr/textAppearanceLabelLarge"
+                            android:textColor="?attr/colorOnSurface" />
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/environmentChipGroup"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            app:singleSelection="true">
+
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/certChip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Certification"
+                                android:checked="true"
+                                style="@style/Widget.Material3.Chip.Filter" />
+
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/prodChip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Production"
+                                style="@style/Widget.Material3.Chip.Filter" />
+
+                        </com.google.android.material.chip.ChipGroup>
+
+                        <!-- Network Configuration -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="16dp">
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="2"
+                                android:layout_marginEnd="8dp"
+                                android:hint="IP Address"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/ipAddressInput"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="numberDecimal"
+                                    android:digits="0123456789." />
+
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="8dp"
+                                android:hint="Port"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/portInput"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="number" />
+
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                        </LinearLayout>
+
+                        <!-- Additional Actions -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="16dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/paramDownloadButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="4dp"
+                                android:text="Params"
+                                android:textSize="12sp"
+                                android:padding="8dp"
+                                style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/deviceInfoButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="4dp"
+                                android:layout_marginEnd="4dp"
+                                android:text="Info"
+                                android:textSize="12sp"
+                                android:padding="8dp"
+                                style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/resetButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="4dp"
+                                android:text="Reset"
+                                android:textSize="12sp"
+                                android:padding="8dp"
+                                style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Status Banner (shows transaction progress) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/statusBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="?attr/colorSecondaryContainer"
+        style="@style/Widget.Material3.CardView.Elevated">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/statusProgress"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="12dp"
+                app:indicatorSize="24dp"
+                app:trackThickness="3dp" />
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Processing transaction..."
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSecondaryContainer" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/cancelButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cancel"
+                style="@style/Widget.Material3.Button.TextButton" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- FAB for response details -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/responseDetailsFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:text="View Response"
+        app:icon="@drawable/ic_receipt"
+        android:visibility="gone" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
