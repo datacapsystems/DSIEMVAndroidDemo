@@ -82,13 +82,14 @@ public class MainActivity extends AppCompatActivity
 {
 
     private AtomicBoolean cardDataCollect = new AtomicBoolean(false);
-    private final Logger LOGGER = Logger.getLogger("dsiEMVAndroidDemo");
+    private static final Logger LOGGER = Logger.getLogger("dsiEMVAndroidDemo");
     private static final int PERMISSION_REQUEST_BACKGROUND_LOCATION = 2;
     private static final String VP3300_USB = "IDTECH-VP3300-USB";
     private static final String VP3300_RS232 = "IDTECH-VP3300-RS232";
     private static final String VP3350_USB = "IDTECH-VP3350-USB";
     private static final String LANE3000_IP = "INGENICO_LANE_3000_IP";
     private static final String PAX_ANDROID_IP = "PAX_ANDROID_IP";
+    private static final String INGENICO_ANDROID_IP = "INGENICO_ANDROID_IP";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String mConnectedDevice = "";
@@ -106,6 +107,7 @@ public class MainActivity extends AppCompatActivity
     static
     {
         padMap = new HashMap<>();
+        // PAX
         padMap.put("A77", "EMV_A77_DATACAP_E2E");
         padMap.put("A60", "EMV_A60_DATACAP_E2E");
         padMap.put("A920Pro", "EMV_A920PRO_DATACAP_E2E");
@@ -119,6 +121,13 @@ public class MainActivity extends AppCompatActivity
         padMap.put("A3700", "EMV_A3700_DATACAP_E2E");
         padMap.put("A800", "EMV_A800_DATACAP_E2E");
         padMap.put("A6650", "EMV_A6650_DATACAP_E2E");
+        // Ingenico
+        padMap.put("DX4000", "EMV_DX4000_DATACAP_E2E");
+        padMap.put("DX8000", "EMV_DX8000_DATACAP_E2E");
+        padMap.put("EX6000", "EMV_EX6000_DATACAP_E2E");
+        padMap.put("EX8000", "EMV_EX8000_DATACAP_E2E");
+        padMap.put("RX5000", "EMV_RX5000_DATACAP_E2E");
+        padMap.put("RX7000", "EMV_RX7000_DATACAP_E2E");
     }
 
     @Override
@@ -189,13 +198,16 @@ public class MainActivity extends AppCompatActivity
                         && !tempName.equals(VP3300_RS232)
                         && !tempName.equals(VP3350_USB)
                         && !tempName.equals(LANE3000_IP)
-                        && !tempName.equals(PAX_ANDROID_IP);
+                        && !tempName.equals(PAX_ANDROID_IP)
+                        && !tempName.equals(INGENICO_ANDROID_IP);
                 if (mConnectedDevice.equals(tempName) &&
                         (!mConnectedDevice.equals(VP3300_USB)
                                 && !mConnectedDevice.equals(VP3300_RS232)
                                 && !mConnectedDevice.equals(VP3350_USB)
                                 && !mConnectedDevice.equals(LANE3000_IP)
-                                && !mConnectedDevice.equals(PAX_ANDROID_IP))
+                                && !mConnectedDevice.equals(PAX_ANDROID_IP)
+                                && !mConnectedDevice.equals(INGENICO_ANDROID_IP)
+                        )
                         && isBluetoothName)
                 {
                     TextView nodt = findViewById(nameOfDeviceText);
@@ -241,6 +253,7 @@ public class MainActivity extends AppCompatActivity
         mDeviceList.add(VP3350_USB);
         mDeviceList.add(LANE3000_IP);
         mDeviceList.add(PAX_ANDROID_IP);
+        mDeviceList.add(INGENICO_ANDROID_IP);
 
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.bt_scroll_view, null);
@@ -483,7 +496,7 @@ public class MainActivity extends AppCompatActivity
         // however normally it would be serialized into an object or parsed for receipt printing and persisted to an integrators transaction database.
         dsiEMVAndroidinstance.getInstance(MainActivity.this).AddProcessTransactionResponseListener(response -> handler.post(() ->
         {
-            if (mConnectedDevice.equals(PAX_ANDROID_IP))
+            if (mConnectedDevice.equals(PAX_ANDROID_IP) || mConnectedDevice.equals(INGENICO_ANDROID_IP))
             {
                 bringToFront();
             }
@@ -494,7 +507,7 @@ public class MainActivity extends AppCompatActivity
 
         dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(response -> handler.post(() ->
         {
-            if (mConnectedDevice.equals(PAX_ANDROID_IP))
+            if (mConnectedDevice.equals(PAX_ANDROID_IP) || mConnectedDevice.equals(INGENICO_ANDROID_IP))
             {
                 bringToFront();
             }
@@ -556,6 +569,11 @@ public class MainActivity extends AppCompatActivity
                 newSale.setPinPadIpAddress(padIP);
                 newSale.setPinPadIpPort("1235");
                 break;
+            case INGENICO_ANDROID_IP:
+                newSale.setSecureDevice(determineSecureDevice());
+                newSale.setPinPadIpAddress(padIP);
+                newSale.setPinPadIpPort("12001");
+            break;
             case VP3300_USB:
                 newSale.setSecureDevice("EMV_VP3300_DATACAP");
                 break;
@@ -613,6 +631,11 @@ public class MainActivity extends AppCompatActivity
                 newReturn.setSecureDevice(determineSecureDevice());
                 newReturn.setPinPadIpAddress(padIP);
                 newReturn.setPinPadIpPort("1235");
+                break;
+            case INGENICO_ANDROID_IP:
+                newReturn.setSecureDevice(determineSecureDevice());
+                newReturn.setPinPadIpAddress(padIP);
+                newReturn.setPinPadIpPort("12001");
                 break;
             case VP3300_USB:
                 newReturn.setSecureDevice("EMV_VP3300_DATACAP");
@@ -680,7 +703,21 @@ public class MainActivity extends AppCompatActivity
                         "1",
                         padIP,
                         "1235");
-
+                break;
+            case INGENICO_ANDROID_IP:
+                newReturn = new Transaction(merchID,
+                        "DSIEMVAndroid_Demo",
+                        "EMVUSClient:1.27",
+                        tranCode,
+                        determineSecureDevice(),
+                        "10",
+                        amt,
+                        "0010010010",
+                        mOperationMode,
+                        "RecordNumberRequested",
+                        "1",
+                        padIP,
+                        "12001");
                 break;
             case VP3300_USB:
             case VP3300_RS232:
@@ -755,6 +792,11 @@ public class MainActivity extends AppCompatActivity
                 newParam.setPinPadIpAddress(padIP);
                 newParam.setPinPadIpPort("1235");
                 break;
+            case INGENICO_ANDROID_IP:
+                newParam.setSecureDevice(determineSecureDevice());
+                newParam.setPinPadIpAddress(padIP);
+                newParam.setPinPadIpPort("12001");
+                break;
             case VP3300_USB:
                 newParam.setSecureDevice("EMV_VP3300_DATACAP");
                 break;
@@ -807,6 +849,11 @@ public class MainActivity extends AppCompatActivity
                 newReturn.setSecureDevice(determineSecureDevice());
                 newReturn.setPinPadIpAddress(padIP);
                 newReturn.setPinPadIpPort("1235");
+                break;
+            case INGENICO_ANDROID_IP:
+                newReturn.setSecureDevice(determineSecureDevice());
+                newReturn.setPinPadIpAddress(padIP);
+                newReturn.setPinPadIpPort("12001");
                 break;
             case VP3300_USB:
                 newReturn.setSecureDevice("EMV_VP3300_DATACAP");
@@ -1050,6 +1097,16 @@ public class MainActivity extends AppCompatActivity
         {
             for (String d : mDeviceList)
             {
+                if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return false;
+                }
                 if (Objects.equals(d, device.getName()))
                 {
                     return true;
@@ -1254,6 +1311,7 @@ public class MainActivity extends AppCompatActivity
     private static String determineSecureDevice()
     {
         String deviceModel = android.os.Build.MODEL;
+        LOGGER.info("Device model: " + deviceModel);
         String secureDevice = padMap.get(deviceModel);
         //if secure device cant be found, treat it like an A920 Pro
         if (secureDevice == null)

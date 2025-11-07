@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-
-
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
@@ -19,6 +17,16 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Android -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- PAX -->
+    <uses-permission android:name="com.pax.permission.RECV_BOOT_COMPLETED" />
+    <uses-permission android:name="com.pax.permission.PAX_START_ACTIVITIES_FROM_BACKGROUND" />
+    <!-- Ingenico Axium-->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="com.datacap.permission.REQUEST_ACTIVITY" />
+    <uses-permission android:name="com.datacap.permission.BROADCAST" />
+
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
 
     <application
@@ -37,6 +45,29 @@
 			<meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </activity>
+        <receiver android:name=".BootReceiver" android:enabled="true" android:exported="false">
+            <!-- Android -->
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.HOME"/>
+            </intent-filter>
+            <!-- PAX -->
+            <intent-filter>
+                <action android:name="paydroid.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.HOME" />
+            </intent-filter>
+            <!-- Ingenico Axium -->
+            <intent-filter>
+                <action android:name="smartpos.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.HOME"/>
+            </intent-filter>
+        </receiver>
+        <!-- Ingenico Axium-->
+        <receiver android:name=".BootReceiver$Secondary" android:enabled="true" android:exported="false"
+            android:permission="com.datacap.permission.BROADCAST">
+            <intent-filter>
+                <action android:name="com.datacap.action.BROADCAST_RECEIVER_READY"/>
+            </intent-filter>
+        </receiver>
     </application>
-
 </manifest>
