@@ -45,7 +45,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 
@@ -53,7 +52,6 @@ import java.util.logging.Logger;
 import static com.example.dsiemvandroiddemo.R.id.saleButton;
 import static com.example.dsiemvandroiddemo.R.id.returnButton;
 import static com.example.dsiemvandroiddemo.R.id.cancelButton;
-//collect card data button?
 
 import static com.example.dsiemvandroiddemo.R.id.selectDevice;
 import static com.example.dsiemvandroiddemo.R.id.emvParamDownloadButton;
@@ -81,12 +79,12 @@ import androidx.viewpager2.widget.ViewPager2;
 public class MainActivity extends AppCompatActivity
 {
 
-    private AtomicBoolean cardDataCollect = new AtomicBoolean(false);
     private static final Logger LOGGER = Logger.getLogger("dsiEMVAndroidDemo");
     private static final int PERMISSION_REQUEST_BACKGROUND_LOCATION = 2;
     private static final String VP3300_USB = "IDTECH-VP3300-USB";
     private static final String VP3300_RS232 = "IDTECH-VP3300-RS232";
     private static final String VP3350_USB = "IDTECH-VP3350-USB";
+    private static final String VP8300_USB = "IDTECH-VP8300-USB";
     private static final String LANE3000_IP = "INGENICO_LANE_3000_IP";
     private static final String PAX_ANDROID_IP = "PAX_ANDROID_IP";
     private static final String INGENICO_ANDROID_IP = "INGENICO_ANDROID_IP";
@@ -99,7 +97,6 @@ public class MainActivity extends AppCompatActivity
     private AlertDialog mBTdialog;
     private ArrayAdapter<String> listAdapter;
     private String mOperationMode = "CERT";
-    private final SAFListener safListener = new SAFListener(getSupportFragmentManager());
 
     private static final Map<String, String> padMap;
     private static final int REQUEST_PERMISSIONS = 2;
@@ -197,6 +194,7 @@ public class MainActivity extends AppCompatActivity
                 boolean isBluetoothName = !tempName.equals(VP3300_USB)
                         && !tempName.equals(VP3300_RS232)
                         && !tempName.equals(VP3350_USB)
+                        && !tempName.equals(VP8300_USB)
                         && !tempName.equals(LANE3000_IP)
                         && !tempName.equals(PAX_ANDROID_IP)
                         && !tempName.equals(INGENICO_ANDROID_IP);
@@ -204,6 +202,7 @@ public class MainActivity extends AppCompatActivity
                         (!mConnectedDevice.equals(VP3300_USB)
                                 && !mConnectedDevice.equals(VP3300_RS232)
                                 && !mConnectedDevice.equals(VP3350_USB)
+                                && !mConnectedDevice.equals(VP8300_USB)
                                 && !mConnectedDevice.equals(LANE3000_IP)
                                 && !mConnectedDevice.equals(PAX_ANDROID_IP)
                                 && !mConnectedDevice.equals(INGENICO_ANDROID_IP)
@@ -251,6 +250,7 @@ public class MainActivity extends AppCompatActivity
         mDeviceList.add(VP3300_USB);
         mDeviceList.add(VP3300_RS232);
         mDeviceList.add(VP3350_USB);
+        mDeviceList.add(VP8300_USB);
         mDeviceList.add(LANE3000_IP);
         mDeviceList.add(PAX_ANDROID_IP);
         mDeviceList.add(INGENICO_ANDROID_IP);
@@ -505,16 +505,6 @@ public class MainActivity extends AppCompatActivity
             LOGGER.info(response);
         }));
 
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(response -> handler.post(() ->
-        {
-            if (mConnectedDevice.equals(PAX_ANDROID_IP) || mConnectedDevice.equals(INGENICO_ANDROID_IP))
-            {
-                bringToFront();
-            }
-            TextView transactionresponseText = findViewById(R.id.transResposne);
-            transactionresponseText.setText(response);
-        }));
-
         //get the IP of the Android Device
         String ipOfPhone = getIPAddress(true);
         TextView ipView = findViewById(R.id.ipText);
@@ -583,6 +573,9 @@ public class MainActivity extends AppCompatActivity
             case VP3350_USB:
                 newSale.setSecureDevice("EMV_VP3350_DATACAP");
                 break;
+            case VP8300_USB:
+                newSale.setSecureDevice("EMV_VP8300_DATACAP");
+                break;
             default:
                 // Must be a bluetooth device
                 newSale.setBluetoothDeviceName(mConnectedDevice);
@@ -645,6 +638,9 @@ public class MainActivity extends AppCompatActivity
                 break;
             case VP3350_USB:
                 newReturn.setSecureDevice("EMV_VP3350_DATACAP");
+                break;
+            case VP8300_USB:
+                newReturn.setSecureDevice("EMV_VP8300_DATACAP");
                 break;
             default:
                 // Must be a bluetooth device
@@ -806,6 +802,9 @@ public class MainActivity extends AppCompatActivity
             case VP3350_USB:
                 newParam.setSecureDevice("EMV_VP3350_DATACAP");
                 break;
+            case VP8300_USB:
+                newParam.setSecureDevice("EMV_VP8300_DATACAP");
+                break;
             default:
                 // Must be a bluetooth device
                 newParam.setBluetoothDeviceName(mConnectedDevice);
@@ -863,6 +862,9 @@ public class MainActivity extends AppCompatActivity
                 break;
             case VP3350_USB:
                 newReturn.setSecureDevice("EMV_VP3350_DATACAP");
+                break;
+            case VP8300_USB:
+                newReturn.setSecureDevice("EMV_VP8300_DATACAP");
                 break;
             default:
                 // Must be a bluetooth device
