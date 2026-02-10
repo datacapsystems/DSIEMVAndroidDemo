@@ -12,6 +12,7 @@ public class Admin {
     private String OperationMode;
     private String PinPadIpAddress;
     private String PinPadIpPort;
+    private String SoftPosUserId;
 
     public Admin(
             String merchantID,
@@ -114,5 +115,9 @@ public class Admin {
 
     public void setPinPadIpPort(String pinPadIpPort) {
         PinPadIpPort = pinPadIpPort;
+    }
+    public void setSoftPosUserId(String softPosUserId) {SoftPosUserId = softPosUserId; }
+    public String getSoftPosUserId() {
+        return SoftPosUserId;
     }
 }

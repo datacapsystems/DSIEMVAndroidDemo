@@ -45,7 +45,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 
@@ -53,7 +52,6 @@ import java.util.logging.Logger;
 import static com.example.dsiemvandroiddemo.R.id.saleButton;
 import static com.example.dsiemvandroiddemo.R.id.returnButton;
 import static com.example.dsiemvandroiddemo.R.id.cancelButton;
-//collect card data button?
 
 import static com.example.dsiemvandroiddemo.R.id.selectDevice;
 import static com.example.dsiemvandroiddemo.R.id.emvParamDownloadButton;
@@ -81,15 +79,16 @@ import androidx.viewpager2.widget.ViewPager2;
 public class MainActivity extends AppCompatActivity
 {
 
-    private AtomicBoolean cardDataCollect = new AtomicBoolean(false);
     private static final Logger LOGGER = Logger.getLogger("dsiEMVAndroidDemo");
     private static final int PERMISSION_REQUEST_BACKGROUND_LOCATION = 2;
     private static final String VP3300_USB = "IDTECH-VP3300-USB";
     private static final String VP3300_RS232 = "IDTECH-VP3300-RS232";
     private static final String VP3350_USB = "IDTECH-VP3350-USB";
+    private static final String VP8300_USB = "IDTECH-VP8300-USB";
     private static final String LANE3000_IP = "INGENICO_LANE_3000_IP";
     private static final String PAX_ANDROID_IP = "PAX_ANDROID_IP";
     private static final String INGENICO_ANDROID_IP = "INGENICO_ANDROID_IP";
+    private static final String SURETAP = "EMV_SURETAP_DATACAP";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String mConnectedDevice = "";
@@ -99,7 +98,6 @@ public class MainActivity extends AppCompatActivity
     private AlertDialog mBTdialog;
     private ArrayAdapter<String> listAdapter;
     private String mOperationMode = "CERT";
-    private final SAFListener safListener = new SAFListener(getSupportFragmentManager());
 
     private static final Map<String, String> padMap;
     private static final int REQUEST_PERMISSIONS = 2;
@@ -108,26 +106,26 @@ public class MainActivity extends AppCompatActivity
     {
         padMap = new HashMap<>();
         // PAX
-        padMap.put("A77", "EMV_A77_DATACAP_E2E");
-        padMap.put("A60", "EMV_A60_DATACAP_E2E");
-        padMap.put("A920Pro", "EMV_A920PRO_DATACAP_E2E");
-        padMap.put("A920", "EMV_A920PRO_DATACAP_E2E");
-        padMap.put("Aries6", "EMV_ARIES6_DATACAP_E2E");
-        padMap.put("Aries8", "EMV_ARIES8_DATACAP_E2E");
-        padMap.put("A35", "EMV_A35_DATACAP_E2E");
-        padMap.put("A30", "EMV_A30_DATACAP_E2E");
-        padMap.put("IM30", "EMV_IM30_DATACAP_E2E");
-        padMap.put("A920MAX", "EMV_A920PRO_DATACAP_E2E");
-        padMap.put("A3700", "EMV_A3700_DATACAP_E2E");
-        padMap.put("A800", "EMV_A800_DATACAP_E2E");
-        padMap.put("A6650", "EMV_A6650_DATACAP_E2E");
+        padMap.put("A77",       "EMV_A77_DATACAP_E2E");
+        padMap.put("A60",       "EMV_A60_DATACAP_E2E");
+        padMap.put("A920Pro",   "EMV_A920PRO_DATACAP_E2E");
+        padMap.put("A920",      "EMV_A920PRO_DATACAP_E2E");
+        padMap.put("Aries6",    "EMV_ARIES6_DATACAP_E2E");
+        padMap.put("Aries8",    "EMV_ARIES8_DATACAP_E2E");
+        padMap.put("A35",       "EMV_A35_DATACAP_E2E");
+        padMap.put("A30",       "EMV_A30_DATACAP_E2E");
+        padMap.put("IM30",      "EMV_IM30_DATACAP_E2E");
+        padMap.put("A920MAX",   "EMV_A920PRO_DATACAP_E2E");
+        padMap.put("A3700",     "EMV_A3700_DATACAP_E2E");
+        padMap.put("A800",      "EMV_A800_DATACAP_E2E");
+        padMap.put("A6650",     "EMV_A6650_DATACAP_E2E");
         // Ingenico
-        padMap.put("DX4000", "EMV_DX4000_DATACAP_E2E");
-        padMap.put("DX8000", "EMV_DX8000_DATACAP_E2E");
-        padMap.put("EX6000", "EMV_EX6000_DATACAP_E2E");
-        padMap.put("EX8000", "EMV_EX8000_DATACAP_E2E");
-        padMap.put("RX5000", "EMV_RX5000_DATACAP_E2E");
-        padMap.put("RX7000", "EMV_RX7000_DATACAP_E2E");
+        padMap.put("DX4000",    "EMV_DX4000_DATACAP_E2E");
+        padMap.put("DX8000",    "EMV_DX8000_DATACAP_E2E");
+        padMap.put("EX6000",    "EMV_EX6000_DATACAP_E2E");
+        padMap.put("EX8000",    "EMV_EX8000_DATACAP_E2E");
+        padMap.put("RX5000",    "EMV_RX5000_DATACAP_E2E");
+        padMap.put("RX7000",    "EMV_RX7000_DATACAP_E2E");
     }
 
     @Override
@@ -197,16 +195,20 @@ public class MainActivity extends AppCompatActivity
                 boolean isBluetoothName = !tempName.equals(VP3300_USB)
                         && !tempName.equals(VP3300_RS232)
                         && !tempName.equals(VP3350_USB)
+                        && !tempName.equals(VP8300_USB)
                         && !tempName.equals(LANE3000_IP)
                         && !tempName.equals(PAX_ANDROID_IP)
-                        && !tempName.equals(INGENICO_ANDROID_IP);
+                        && !tempName.equals(INGENICO_ANDROID_IP)
+                        && !tempName.equals(SURETAP);
                 if (mConnectedDevice.equals(tempName) &&
                         (!mConnectedDevice.equals(VP3300_USB)
                                 && !mConnectedDevice.equals(VP3300_RS232)
                                 && !mConnectedDevice.equals(VP3350_USB)
+                                && !mConnectedDevice.equals(VP8300_USB)
                                 && !mConnectedDevice.equals(LANE3000_IP)
                                 && !mConnectedDevice.equals(PAX_ANDROID_IP)
                                 && !mConnectedDevice.equals(INGENICO_ANDROID_IP)
+                                && !mConnectedDevice.equals(SURETAP)
                         )
                         && isBluetoothName)
                 {
@@ -251,9 +253,11 @@ public class MainActivity extends AppCompatActivity
         mDeviceList.add(VP3300_USB);
         mDeviceList.add(VP3300_RS232);
         mDeviceList.add(VP3350_USB);
+        mDeviceList.add(VP8300_USB);
         mDeviceList.add(LANE3000_IP);
         mDeviceList.add(PAX_ANDROID_IP);
         mDeviceList.add(INGENICO_ANDROID_IP);
+        mDeviceList.add(SURETAP);
 
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.bt_scroll_view, null);
@@ -280,7 +284,7 @@ public class MainActivity extends AppCompatActivity
         viewPager.post(() ->
         {
             // Setting defaults for params
-            //((EditText) findViewById(R.id.merchantIDText)).setText("CROSSCHAL1GD");
+            ((EditText) findViewById(R.id.merchantIDText)).setText("SPTESCHAL0GP");
             //((EditText) findViewById(R.id.IPPadtext)).setText("192.168.0.99");
             //((EditText) findViewById(R.id.PadPorttext)).setText("1235");
             ((EditText) findViewById(R.id.amountText)).setText("1.00");
@@ -505,16 +509,6 @@ public class MainActivity extends AppCompatActivity
             LOGGER.info(response);
         }));
 
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(response -> handler.post(() ->
-        {
-            if (mConnectedDevice.equals(PAX_ANDROID_IP) || mConnectedDevice.equals(INGENICO_ANDROID_IP))
-            {
-                bringToFront();
-            }
-            TextView transactionresponseText = findViewById(R.id.transResposne);
-            transactionresponseText.setText(response);
-        }));
-
         //get the IP of the Android Device
         String ipOfPhone = getIPAddress(true);
         TextView ipView = findViewById(R.id.ipText);
@@ -522,6 +516,11 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+    @Override
+    protected void onDestroy() {
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).clearActivity();
+        super.onDestroy();
+    }
     public void onRadioButtonClicked(View view)
     {
         // Is the button now checked?
@@ -583,6 +582,12 @@ public class MainActivity extends AppCompatActivity
             case VP3350_USB:
                 newSale.setSecureDevice("EMV_VP3350_DATACAP");
                 break;
+            case VP8300_USB:
+                newSale.setSecureDevice("EMV_VP8300_DATACAP");
+                break;
+            case SURETAP:
+                newSale.setSecureDevice("EMV_SURETAP_DATACAP");
+            break;
             default:
                 // Must be a bluetooth device
                 newSale.setBluetoothDeviceName(mConnectedDevice);
@@ -646,113 +651,16 @@ public class MainActivity extends AppCompatActivity
             case VP3350_USB:
                 newReturn.setSecureDevice("EMV_VP3350_DATACAP");
                 break;
+            case VP8300_USB:
+                newReturn.setSecureDevice("EMV_VP8300_DATACAP");
+                break;
+            case SURETAP:
+                newReturn.setSecureDevice("EMV_SURETAP_DATACAP");
+                break;
             default:
                 // Must be a bluetooth device
                 newReturn.setBluetoothDeviceName(mConnectedDevice);
                 newReturn.setSecureDevice(determineSecureDeviceByBTName(mConnectedDevice));
-                break;
-        }
-        TStream tStream = new TStream(newReturn);
-
-        ByteArrayOutputStream bao = new ByteArrayOutputStream();
-        Serializer serializer = new Persister();
-        try
-        {
-            serializer.write(tStream, bao);
-        }
-        catch (Exception ex)
-        {
-            //serialization exception
-        }
-        return bao.toString();
-    }
-
-    private String setupCollectCardData(String amount, String merchID, String padIP, String padPort)
-    {
-        String tranCode = "CollectCardData";
-        Amount amt = new Amount(amount);
-        Transaction newReturn;
-        switch (mConnectedDevice)
-        {
-            case LANE3000_IP:
-                newReturn = new Transaction(merchID,
-                        "DSIEMVAndroid_Demo",
-                        "EMVUSClient:1.27",
-                        tranCode,
-                        "EMV_LANE3000_DATACAP_E2E",
-                        "100",
-                        amt,
-                        "0010010010",
-                        mOperationMode,
-                        "RecordNumberRequested",
-                        "23",
-                        padIP,
-                        padPort);
-                break;
-            case PAX_ANDROID_IP:
-                newReturn = new Transaction(merchID,
-                        "DSIEMVAndroid_Demo",
-                        "EMVUSClient:1.27",
-                        tranCode,
-                        determineSecureDevice(),
-                        "10",
-                        amt,
-                        "0010010010",
-                        mOperationMode,
-                        "RecordNumberRequested",
-                        "1",
-                        padIP,
-                        "1235");
-                break;
-            case INGENICO_ANDROID_IP:
-                newReturn = new Transaction(merchID,
-                        "DSIEMVAndroid_Demo",
-                        "EMVUSClient:1.27",
-                        tranCode,
-                        determineSecureDevice(),
-                        "10",
-                        amt,
-                        "0010010010",
-                        mOperationMode,
-                        "RecordNumberRequested",
-                        "1",
-                        padIP,
-                        "12001");
-                break;
-            case VP3300_USB:
-            case VP3300_RS232:
-                //USB connected devices need no "BluetoothDeviceName"
-                String secureDevice = "EMV_VP3300_DATACAP";
-                //RS232 takes a different secure device name
-                if (mConnectedDevice.equals(VP3300_RS232))
-                {
-                    secureDevice = "EMV_VP3300_DATACAP_RS232";
-                }
-                newReturn = new Transaction(merchID,
-                        "DSIEMVAndroid_Demo",
-                        "EMVUSClient:1.27",
-                        tranCode,
-                        secureDevice,
-                        "100",
-                        amt,
-                        "0010010010",
-                        mOperationMode,
-                        "RecordNumberRequested",
-                        "23");
-                break;
-            default:
-                newReturn = new Transaction(merchID,
-                        "DSIEMVAndroid_Demo",
-                        "EMVUSClient:1.27",
-                        tranCode,
-                        "EMV_VP3300_DATACAP",
-                        "100",
-                        amt,
-                        "0010010010",
-                        mConnectedDevice,
-                        mOperationMode,
-                        "RecordNumberRequested",
-                        "23");
                 break;
         }
         TStream tStream = new TStream(newReturn);
@@ -805,6 +713,13 @@ public class MainActivity extends AppCompatActivity
                 break;
             case VP3350_USB:
                 newParam.setSecureDevice("EMV_VP3350_DATACAP");
+                break;
+            case VP8300_USB:
+                newParam.setSecureDevice("EMV_VP8300_DATACAP");
+                break;
+            case SURETAP:
+                newParam.setSecureDevice("EMV_SURETAP_DATACAP");
+                newParam.setSoftPosUserId("c1bf36ebcb40b7709d5c542e766fe3c9");
                 break;
             default:
                 // Must be a bluetooth device
@@ -863,6 +778,12 @@ public class MainActivity extends AppCompatActivity
                 break;
             case VP3350_USB:
                 newReturn.setSecureDevice("EMV_VP3350_DATACAP");
+                break;
+            case VP8300_USB:
+                newReturn.setSecureDevice("EMV_VP8300_DATACAP");
+                break;
+            case SURETAP:
+                newReturn.setSecureDevice("EMV_VP8300_DATACAP");
                 break;
             default:
                 // Must be a bluetooth device
