@@ -33,4 +33,5 @@
     <string name="collectCardData">CollectCardData</string>
     <string name="padreset">EMVPadReset</string>
     <string name="uselastcardhint">UseLastCardID</string>
+    <string name="softposuserid">SoftPOS User ID</string>
 </resources>
