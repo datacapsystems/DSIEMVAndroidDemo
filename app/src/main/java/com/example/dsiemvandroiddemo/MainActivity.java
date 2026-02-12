@@ -171,7 +171,7 @@ public class MainActivity extends AppCompatActivity
         try
         {
             //sets up local endpoint to be used with EMV US Test Client
-            LocalListener li = new LocalListener(MainActivity.this);
+            //LocalListener li = new LocalListener(MainActivity.this);
         }
         catch (Exception ex)
         {
