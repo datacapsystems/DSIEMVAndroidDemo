@@ -63,6 +63,7 @@ import static com.example.dsiemvandroiddemo.R.id.merchantIDText;
 import static com.example.dsiemvandroiddemo.R.id.IPPadtext;
 import static com.example.dsiemvandroiddemo.R.id.PadPorttext;
 import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
+import static com.example.dsiemvandroiddemo.R.id.softPosUserIdText;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -284,7 +285,7 @@ public class MainActivity extends AppCompatActivity
         viewPager.post(() ->
         {
             // Setting defaults for params
-            ((EditText) findViewById(R.id.merchantIDText)).setText("SPTESCHAL0GP");
+            //((EditText) findViewById(R.id.merchantIDText)).setText("DEFAULTMIDHERE");
             //((EditText) findViewById(R.id.IPPadtext)).setText("192.168.0.99");
             //((EditText) findViewById(R.id.PadPorttext)).setText("1235");
             ((EditText) findViewById(R.id.amountText)).setText("1.00");
@@ -386,11 +387,13 @@ public class MainActivity extends AppCompatActivity
                 final String padIP = PainPadIptv.getText().toString();
                 TextView PadPorttexttv = findViewById(PadPorttext);
                 final String padPort = PadPorttexttv.getText().toString();
+                TextView softPosUserIdTexttv = findViewById(softPosUserIdText);
+                final String softPosUserId = softPosUserIdTexttv.getText().toString().strip();
                 executor.submit(() ->
                 {
 
                     //generates xml for running a EMVParamDownload
-                    String xmlRequest = setupParamDownload(merchID, padIP, padPort);
+                    String xmlRequest = setupParamDownload(merchID, padIP, padPort, softPosUserId);
                     LOGGER.info(xmlRequest);
                     //runs the sale to the connected device
                     dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
@@ -678,7 +681,7 @@ public class MainActivity extends AppCompatActivity
         return bao.toString();
     }
 
-    private String setupParamDownload(String merchID, String padIP, String padPort)
+    private String setupParamDownload(String merchID, String padIP, String padPort, String softPosUserId)
     {
         Admin newParam = new Admin(
                 merchID,
@@ -719,7 +722,7 @@ public class MainActivity extends AppCompatActivity
                 break;
             case SURETAP:
                 newParam.setSecureDevice("EMV_SURETAP_DATACAP");
-                newParam.setSoftPosUserId("c1bf36ebcb40b7709d5c542e766fe3c9");
+                newParam.setSoftPosUserId(softPosUserId);
                 break;
             default:
                 // Must be a bluetooth device
