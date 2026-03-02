@@ -1,5 +1,5 @@
-<resources>
-    <string name="app_name">DSIEMVAndroidDemo</string>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name" tools:override="true">DSIEMVAndroidDemo</string>
     <string name="connecting_to_device">Connecting to Device…</string>
     <string name="starting_sale">Starting Sale</string>
     <string name="running_sale">Running Sale</string>
@@ -30,7 +30,6 @@
     <string name="return_message_from_dsiemvandroid">Return message from DSIEMVAndroid</string>
     <string name="transaction_raw_response">Transaction Raw Response</string>
     <string name="datacap_systems_inc">Datacap Systems, Inc.</string>
-    <string name="collectCardData">CollectCardData</string>
     <string name="padreset">EMVPadReset</string>
     <string name="uselastcardhint">UseLastCardID</string>
     <string name="softposuserid">SoftPOS User ID</string>
