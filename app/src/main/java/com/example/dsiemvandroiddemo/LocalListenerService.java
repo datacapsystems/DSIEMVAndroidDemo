@@ -76,7 +76,11 @@ public class LocalListenerService extends Service
                     //.setAutoCancel(true)
                     .build();
 
-            //startForeground(3, notification);
+            // PM 03/02/2026 - Updating app to run as service instead of from the main activity
+            Log.d("startForeground","Pre  startForeground call");
+            startForeground(3, notification);
+            Log.d("startForeground","Post startForeground call");
+
         }
         else
         {
@@ -89,7 +93,20 @@ public class LocalListenerService extends Service
     public static void start(Context callerContext)
     {
         Intent startIntent = new Intent(callerContext, LocalListenerService.class);
-        callerContext.startService(startIntent);
+//        Intent bindIntent = new Intent(callerContext, LocalListenerService.class);    // PM 03/02/2026 - Removed; binding no longer required
+
+        // PM 03/02/2026 - Updating app to run as service instead of from the main activity
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            callerContext.startForegroundService(startIntent);
+            Log.d("StartingService","startForegroundService called");
+        }
+        else
+        {
+            callerContext.startService(startIntent);
+            Log.d("StartingService","startService called");
+        }
+//        callerContext.bindService(startIntent);
     }
 
     public void stop()

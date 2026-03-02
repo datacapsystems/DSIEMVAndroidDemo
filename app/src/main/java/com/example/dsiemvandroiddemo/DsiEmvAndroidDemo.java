@@ -11,24 +11,24 @@ import androidx.annotation.Nullable;
 
 public class DsiEmvAndroidDemo extends Application {
 
-    @Nullable
-    private LocalListenerService localListenerService;
-
-    @NonNull
-    public final ServiceConnection localListenerServiceConnection = new ServiceConnection()
-    {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder binder)
-        {
-            localListenerService = ((LocalListenerService.LocalBinder) binder).getService();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName)
-        {
-            localListenerService = null;
-        }
-    };
+//    @Nullable
+//    private LocalListenerService localListenerService;
+//
+//    @NonNull
+//    public final ServiceConnection localListenerServiceConnection = new ServiceConnection()
+//    {
+//        @Override
+//        public void onServiceConnected(ComponentName componentName, IBinder binder)
+//        {
+//            localListenerService = ((LocalListenerService.LocalBinder) binder).getService();
+//        }
+//
+//        @Override
+//        public void onServiceDisconnected(ComponentName componentName)
+//        {
+//            localListenerService = null;
+//        }
+//    };
 
     @Override
     public void onCreate()
