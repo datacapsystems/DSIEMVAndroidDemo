@@ -82,10 +82,6 @@ public class LocalListenerService extends Service
             Log.d("startForeground","Post startForeground call");
 
         }
-        else
-        {
-            //LOGGER.finest("Local listener service is already running");
-        }
 
         return START_STICKY;
     }
@@ -93,7 +89,6 @@ public class LocalListenerService extends Service
     public static void start(Context callerContext)
     {
         Intent startIntent = new Intent(callerContext, LocalListenerService.class);
-//        Intent bindIntent = new Intent(callerContext, LocalListenerService.class);    // PM 03/02/2026 - Removed; binding no longer required
 
         // PM 03/02/2026 - Updating app to run as service instead of from the main activity
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -106,7 +101,6 @@ public class LocalListenerService extends Service
             callerContext.startService(startIntent);
             Log.d("StartingService","startService called");
         }
-//        callerContext.bindService(startIntent);
     }
 
     public void stop()
@@ -125,7 +119,7 @@ public class LocalListenerService extends Service
 
     private void localListenerServiceThread()
     {
-        //LOGGER.finest("Starting Local Listener service");
+        //Log.d("Starting Local Listener service");
         LocalListener localListener = new LocalListener(LOCAL_LISTENER_PORT, this);
 
         //LOGGER.info("Local listener HTTP server is starting");
@@ -174,7 +168,7 @@ public class LocalListenerService extends Service
 
                     if ( !UTF8RequestMsg.contains( "TransactionCancel" ) )
                     {
-                        returnMSG = dsiEMVAndroidinstance.getInstance(context).ProcessTransaction( UTF8RequestMsg );
+                        returnMSG = dsiEMVAndroidinstance.processTransaction( context, UTF8RequestMsg );
                     }
                     else
                     {
