@@ -165,19 +165,9 @@ public class MainActivity extends AppCompatActivity
         viewPager.addItemDecoration(new HorizontalMarginItemDecoration(pageMargin));
 
         getSupportFragmentManager();
-//        dsiEMVAndroidinstance.getInstance(this).SetSAFEventListener(safListener);
         //check for bluetooth and location permissions for bluetooth LE to work.
         // the user must agree to location sharing because locations is part of bluetooth LE spec.
         hasPermissions();
-        try
-        {
-            //sets up local endpoint to be used with EMV US Test Client
-            //LocalListener li = new LocalListener(MainActivity.this);
-        }
-        catch (Exception ex)
-        {
-            //could not start the local server listener
-        }
 
         //setup device dialog click action
         //Skipping over all of the non bluetooth devices
@@ -312,10 +302,9 @@ public class MainActivity extends AppCompatActivity
                 {
                     //generates xml for running a sale
                     String xmlRequest = setupSale(amount, merchID, padIP, padPort);
-                    LOGGER.info(xmlRequest);
                     //runs the sale to the connected device, this does not have to be a singleton.
                     // It was used as a singleton here to support transactions through the local listener server.
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                    dsiEMVAndroidinstance.processTransaction(MainActivity.this, xmlRequest);
                 });
             });
         });
@@ -340,9 +329,8 @@ public class MainActivity extends AppCompatActivity
                 {
                     //generates xml for running a return
                     String xmlRequest = setupReturn(amount, merchID, padIP, padPort);
-                    LOGGER.info(xmlRequest);
                     //runs the sale to the connected device
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                    dsiEMVAndroidinstance.processTransaction(MainActivity.this, xmlRequest);
 
                 });
             });
@@ -394,9 +382,8 @@ public class MainActivity extends AppCompatActivity
 
                     //generates xml for running a EMVParamDownload
                     String xmlRequest = setupParamDownload(merchID, padIP, padPort, softPosUserId);
-                    LOGGER.info(xmlRequest);
                     //runs the sale to the connected device
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                    dsiEMVAndroidinstance.processTransaction(MainActivity.this, xmlRequest);
 
                 });
             });
@@ -435,9 +422,8 @@ public class MainActivity extends AppCompatActivity
 
                     //generates xml for running a EMVParamDownload
                     String xmlRequest = setupPadReset(merchID, padIP, padPort);
-                    LOGGER.info(xmlRequest);
                     //runs the sale to the connected device
-                    dsiEMVAndroidinstance.getInstance(MainActivity.this).ProcessTransaction(xmlRequest);
+                    dsiEMVAndroidinstance.processTransaction(MainActivity.this, xmlRequest);
 
                 });
             });
@@ -509,7 +495,6 @@ public class MainActivity extends AppCompatActivity
             }
             TextView transactionresponseText = findViewById(R.id.transResposne);
             transactionresponseText.setText(response);
-            LOGGER.info(response);
         }));
 
         //get the IP of the Android Device
