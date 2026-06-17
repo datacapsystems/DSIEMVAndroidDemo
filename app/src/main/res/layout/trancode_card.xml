@@ -106,6 +106,18 @@
                     android:layout_weight="5"
                     android:text="@string/padreset" />
 
+                <Button
+                    android:id="@+id/collectCardButton"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_weight="5"
+                    android:background="#00FFFFFF"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/collectcarddata"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                    android:textColor="#D61B5F" />
+
             </LinearLayout>
 
         </LinearLayout>

@@ -172,13 +172,20 @@ public class LocalListenerService extends Service
                     session.getInputStream( ).read( Latin1RequestArray );
                     String UTF8RequestMsg = new String( Latin1RequestArray, StandardCharsets.ISO_8859_1 );
 
-                    if ( !UTF8RequestMsg.contains( "TransactionCancel" ) )
+                    //Route on the request PATH, not the body. CollectCardData is a dedicated control method (not a ProcessTransaction TranCode),
+                    //so a POST to /collectcarddata is dispatched to it; everything else stays on the ProcessTransaction path it always used.
+                    if ( uri != null && uri.toLowerCase().contains( "collectcarddata" ) )
                     {
-                        returnMSG = dsiEMVAndroidinstance.getInstance(context).ProcessTransaction( UTF8RequestMsg );
+                        //CollectCardData returns its RStream response synchronously, just like ProcessTransaction.
+                        returnMSG = dsiEMVAndroidinstance.getInstance(context).CollectCardData( UTF8RequestMsg );
+                    }
+                    else if ( UTF8RequestMsg.contains( "TransactionCancel" ) )
+                    {
+                        dsiEMVAndroidinstance.getInstance(context).CancelRequest();
                     }
                     else
                     {
-                        dsiEMVAndroidinstance.getInstance(context).CancelRequest();
+                        returnMSG = dsiEMVAndroidinstance.getInstance(context).ProcessTransaction( UTF8RequestMsg );
                     }
 
                 } catch (Exception ex) {

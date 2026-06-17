@@ -64,6 +64,7 @@ import static com.example.dsiemvandroiddemo.R.id.IPPadtext;
 import static com.example.dsiemvandroiddemo.R.id.PadPorttext;
 import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
 import static com.example.dsiemvandroiddemo.R.id.softPosUserIdText;
+import static com.example.dsiemvandroiddemo.R.id.collectCardButton;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -418,6 +419,11 @@ public class MainActivity extends AppCompatActivity
 
         viewPager.post(() ->
         {
+            findViewById(collectCardButton).setOnClickListener((v) -> CollectCardData());
+        });
+
+        viewPager.post(() ->
+        {
             findViewById(padResetButton).setOnClickListener((v) ->
             {
                 TextView transMessageView = findViewById(R.id.transMessage);
@@ -512,12 +518,25 @@ public class MainActivity extends AppCompatActivity
             LOGGER.info(response);
         }));
 
+        //CollectCardData fires its own listener list (separate from ProcessTransaction), so register here to receive the pre-dip/tap response.
+        dsiEMVAndroidinstance.getInstance(MainActivity.this).AddCollectCardDataResponseListener(response -> handler.post(() ->
+        {
+            if (mConnectedDevice.equals(PAX_ANDROID_IP) || mConnectedDevice.equals(INGENICO_ANDROID_IP))
+            {
+                bringToFront();
+            }
+            TextView transactionresponseText = findViewById(R.id.transResposne);
+            transactionresponseText.setText(response);
+            LOGGER.info(response);
+        }));
+
         //get the IP of the Android Device
         String ipOfPhone = getIPAddress(true);
         TextView ipView = findViewById(R.id.ipText);
         ipView.setText(String.format("%s%s", getString(R.string.ip_address_of_this_device), ipOfPhone));
 
     }
+
 
     @Override
     protected void onDestroy() {
@@ -795,6 +814,96 @@ public class MainActivity extends AppCompatActivity
                 break;
         }
         TStream tStream = new TStream(newReturn);
+
+        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+        Serializer serializer = new Persister();
+        try
+        {
+            serializer.write(tStream, bao);
+        }
+        catch (Exception ex)
+        {
+            //serialization exception
+        }
+        return bao.toString();
+    }
+
+    //triggered by the CollectCardData button. Reads the on-screen fields and runs a CollectCardData (pre-dip/tap) request off the UI thread.
+    private void CollectCardData()
+    {
+        TextView transMessageView = findViewById(R.id.transMessage);
+        transMessageView.setText(R.string.collectcarddata);
+        TextView transactionresponseText = findViewById(R.id.transResposne);
+        transactionresponseText.setText("");
+        TextView merchIDtv = findViewById(merchantIDText);
+        final String merchID = merchIDtv.getText().toString().strip();
+        TextView amounttv = findViewById(amountText);
+        final String amount = amounttv.getText().toString().strip();
+        TextView PainPadIptv = findViewById(IPPadtext);
+        final String padIP = PainPadIptv.getText().toString().strip();
+        TextView PadPorttexttv = findViewById(PadPorttext);
+        final String padPort = PadPorttexttv.getText().toString().strip();
+        executor.submit(() ->
+        {
+            //generates xml for running a CollectCardData (pre-dip/tap) request
+            String xmlRequest = setupCollectCardData(amount, merchID, padIP, padPort);
+            LOGGER.info(xmlRequest);
+            //collects card data from the connected device; the response is delivered via AddCollectCardDataResponseListener
+            dsiEMVAndroidinstance.getInstance(MainActivity.this).CollectCardData(xmlRequest);
+        });
+    }
+
+    private String setupCollectCardData(String amount, String merchID, String padIP, String padPort)
+    {
+        Transaction collectCardData = new Transaction(
+                merchID,
+                "DSIEMVAndroidDemo:1.00",
+                "CollectCardData",
+                "0010010010"
+        );
+        collectCardData.setOperationMode(mOperationMode);
+        //CollectCardData uses PlaceHolderAmount (not Amount) to manage the CVM behavior of the PIN pad.
+        collectCardData.setPlaceHolderAmount(amount);
+
+        switch (mConnectedDevice)
+        {
+            case LANE3000_IP:
+                collectCardData.setSecureDevice("EMV_LANE3000_DATACAP_E2E");
+                collectCardData.setPinPadIpAddress(padIP);
+                collectCardData.setPinPadIpPort(padPort);
+                break;
+            case PAX_ANDROID_IP:
+                collectCardData.setSecureDevice(determineSecureDevice());
+                collectCardData.setPinPadIpAddress(padIP);
+                collectCardData.setPinPadIpPort("1235");
+                break;
+            case INGENICO_ANDROID_IP:
+                collectCardData.setSecureDevice(determineSecureDevice());
+                collectCardData.setPinPadIpAddress(padIP);
+                collectCardData.setPinPadIpPort("12001");
+                break;
+            case VP3300_USB:
+                collectCardData.setSecureDevice("EMV_VP3300_DATACAP");
+                break;
+            case VP3300_RS232:
+                collectCardData.setSecureDevice("EMV_VP3300_DATACAP_RS232");
+                break;
+            case VP3350_USB:
+                collectCardData.setSecureDevice("EMV_VP3350_DATACAP");
+                break;
+            case VP8300_USB:
+                collectCardData.setSecureDevice("EMV_VP8300_DATACAP");
+                break;
+            case SURETAP:
+                collectCardData.setSecureDevice("EMV_SURETAP_DATACAP");
+                break;
+            default:
+                // Must be a bluetooth device
+                collectCardData.setBluetoothDeviceName(mConnectedDevice);
+                collectCardData.setSecureDevice(determineSecureDeviceByBTName(mConnectedDevice));
+                break;
+        }
+        TStream tStream = new TStream(collectCardData);
 
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
         Serializer serializer = new Persister();

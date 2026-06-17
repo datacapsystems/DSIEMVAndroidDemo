@@ -21,6 +21,7 @@ public class Transaction {
     private String OperationMode;
     private String PinPadIpAddress;
     private String PinPadIpPort;
+    private String PlaceHolderAmount;
 
     public Transaction(
             String merchantID,
@@ -294,5 +295,13 @@ public class Transaction {
     }
     public void setPinPadIpPort(String pinPadIpPort) {
         PinPadIpPort = pinPadIpPort;
+    }
+
+    public String getPlaceHolderAmount() {
+        return PlaceHolderAmount;
+    }
+
+    public void setPlaceHolderAmount(String placeHolderAmount) {
+        PlaceHolderAmount = placeHolderAmount;
     }
 }
