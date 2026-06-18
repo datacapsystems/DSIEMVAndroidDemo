@@ -1,4 +1,58 @@
+import com.android.build.api.artifact.ScopedArtifact
+import com.android.build.api.variant.ScopedArtifacts
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
+
 apply plugin: 'com.android.application'
+
+abstract class StripDatacapSerialPort extends DefaultTask {
+    @InputFiles abstract ListProperty<RegularFile> getAllJars()
+    @InputFiles abstract ListProperty<Directory>   getAllDirectories()
+    @OutputFile abstract RegularFileProperty        getOutput()
+
+    // A class that exists ONLY in Datacap's AAR -> used to recognize our jar.
+    private static final String DATACAP_MARKER = 'com/datacap/android/dsiEMVAndroid.class'
+    private static final String STRIP_PREFIX   = 'android_serialport_api/'
+
+    @TaskAction
+    void run() {
+        def seen = new HashSet<String>()
+        new JarOutputStream(new BufferedOutputStream(new FileOutputStream(output.get().asFile))).withCloseable { jos ->
+
+            // Project / other class dirs -> pass through untouched.
+            allDirectories.get().each { dir ->
+                def root = dir.asFile
+                root.traverse(type: groovy.io.FileType.FILES) { f ->
+                    def name = root.toURI().relativize(f.toURI()).path
+                    if (seen.add(name)) {
+                        jos.putNextEntry(new JarEntry(name))
+                        f.withInputStream { it.transferTo(jos) }
+                        jos.closeEntry()
+                    }
+                }
+            }
+
+            // Dependency jars (incl. exploded AARs).
+            allJars.get().each { rf ->
+                def jar = rf.asFile
+                boolean isDatacap = new JarFile(jar).withCloseable { it.getJarEntry(DATACAP_MARKER) != null }
+                new JarFile(jar).withCloseable { jf ->
+                    jf.entries().each { e ->
+                        if (e.directory) return
+                        // Drop the serial-port package ONLY from Datacap's jar.
+                        if (isDatacap && e.name.startsWith(STRIP_PREFIX)) return
+                        if (seen.add(e.name)) {
+                            jos.putNextEntry(new JarEntry(e.name))
+                            jf.getInputStream(e).withCloseable { it.transferTo(jos) }
+                            jos.closeEntry()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 android {
     compileSdkVersion 34
@@ -17,11 +71,47 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    buildFeatures {
+        buildConfig true
+    }
+    flavorDimensions 'serialport'
+    productFlavors {
+        // Keeps Datacap's android_serialport_api classes.
+        // Sorts before 'removeSerial' alphabetically, so keepSerialDebug is the
+        // default build variant Android Studio selects.
+        keepSerial {
+            dimension 'serialport'
+            buildConfigField "boolean", "SERIAL_ENABLED", "true"
+        }
+        // Strips Datacap's android_serialport_api classes (see androidComponents below).
+        removeSerial {
+            dimension 'serialport'
+            buildConfigField "boolean", "SERIAL_ENABLED", "false"
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
     namespace 'com.example.dsiemvandroiddemo'
+}
+
+androidComponents {
+    // Only the 'removeSerial' flavor strips Datacap's serial-port classes.
+    // The 'keepSerial' flavor builds normally with the classes intact.
+    onVariants(selector().withFlavor("serialport", "removeSerial"), { variant ->
+        def strip = tasks.register(
+            "strip${variant.name.capitalize()}SerialPort",
+            StripDatacapSerialPort)
+        variant.artifacts
+            .forScope(ScopedArtifacts.Scope.ALL)
+            .use(strip)
+            .toTransform(
+                ScopedArtifact.CLASSES.INSTANCE,
+                { it.allJars },
+                { it.allDirectories },
+                { it.output })
+    })
 }
 
 dependencies {

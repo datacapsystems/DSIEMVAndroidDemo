@@ -242,7 +242,11 @@ public class MainActivity extends AppCompatActivity
         };
         //Alert dialog for selecting a device
         mDeviceList.add(VP3300_USB);
-        mDeviceList.add(VP3300_RS232);
+        if (BuildConfig.SERIAL_ENABLED)
+        {
+            // RS232 connects through Datacap's android_serialport_api classes, which the "removeSerial" strips out.
+            mDeviceList.add(VP3300_RS232);
+        }
         mDeviceList.add(VP3350_USB);
         mDeviceList.add(VP8300_USB);
         mDeviceList.add(LANE3000_IP);
