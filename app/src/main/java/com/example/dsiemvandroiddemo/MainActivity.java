@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Rect;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -35,6 +36,10 @@ import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
@@ -95,6 +100,28 @@ public class MainActivity extends AppCompatActivity
     private static final String SURETAP = "EMV_SURETAP_DATACAP";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
+    // The file the user asked to Save; held while the SAF document picker is open, then copied on result.
+    private com.datacap.android.DatacapFile pendingSaveFile;
+    // SAF "create document" launcher: lets the user pick any destination (Files, Downloads, Drive, SD card)
+    // and copies the selected DatacapFile's bytes into it. Registered as a field so it is ready before STARTED.
+    private final ActivityResultLauncher<String> createDocumentLauncher =
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("*/*"), uri ->
+            {
+                com.datacap.android.DatacapFile fileToSave = pendingSaveFile;
+                pendingSaveFile = null;
+                if (uri == null || fileToSave == null)
+                {
+                    // User cancelled the picker, or state was lost (e.g. process death).
+                    return;
+                }
+                executor.submit(() ->
+                {
+                    boolean ok = copyFileToUri(fileToSave.getFile(), uri);
+                    handler.post(() -> Toast.makeText(MainActivity.this,
+                            (ok ? "Saved " : "Save failed: ") + fileToSave.getFile().getName(),
+                            Toast.LENGTH_SHORT).show());
+                });
+            });
     private String mConnectedDevice = "";
     private List<String> mDeviceList = new ArrayList<>();
     String[] devicesArray = mDeviceList.toArray(new String[0]);
@@ -439,7 +466,7 @@ public class MainActivity extends AppCompatActivity
                         }
                         else
                         {
-                            DatacapFileListDialog.show(MainActivity.this, "Log Files", files);
+                            DatacapFileListDialog.show(MainActivity.this, "Log Files", files, this::requestSaveFile);
                         }
                     });
                 }));
@@ -460,7 +487,7 @@ public class MainActivity extends AppCompatActivity
                         }
                         else
                         {
-                            DatacapFileListDialog.show(MainActivity.this, "DB Files", files);
+                            DatacapFileListDialog.show(MainActivity.this, "DB Files", files, this::requestSaveFile);
                         }
                     });
                 }));
@@ -960,6 +987,39 @@ public class MainActivity extends AppCompatActivity
             //serialization exception
         }
         return bao.toString();
+    }
+
+    //Invoked from the file list dialog's Save button. Opens the SAF document picker with the file's name as
+    // the suggested filename; the actual byte copy happens in the createDocumentLauncher result callback.
+    private void requestSaveFile(com.datacap.android.DatacapFile file)
+    {
+        pendingSaveFile = file;
+        createDocumentLauncher.launch(file.getFile().getName());
+    }
+
+    //Copies the source file's bytes into the user-selected SAF destination Uri. Runs off the UI thread.
+    private boolean copyFileToUri(File src, Uri dest)
+    {
+        try (InputStream in = new FileInputStream(src);
+             OutputStream out = getContentResolver().openOutputStream(dest))
+        {
+            if (out == null)
+            {
+                return false;
+            }
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1)
+            {
+                out.write(buffer, 0, read);
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LOGGER.info("Save failed: " + ex.getMessage());
+            return false;
+        }
     }
 
     //code to look for bluetooth le devices. This can be used to show the user a list of available devices,

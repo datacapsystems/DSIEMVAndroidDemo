@@ -22,15 +22,22 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-// Self-contained dialog that lists a List<DatacapFile> with per-row Share and Delete actions.
+// Self-contained dialog that lists a List<DatacapFile> with per-row Share, Save and Delete actions.
 // Knows only about the DatacapFile model; the library call that produced the list happens in MainActivity.
 public class DatacapFileListDialog
 {
-    public static void show(Context ctx, String title, List<DatacapFile> files)
+    // Save needs the Storage Access Framework, which requires an Activity result launcher the dialog
+    // cannot own. The hosting Activity supplies this callback to launch the "create document" picker.
+    public interface SaveRequestListener
+    {
+        void onSaveRequested(DatacapFile file);
+    }
+
+    public static void show(Context ctx, String title, List<DatacapFile> files, SaveRequestListener saveListener)
     {
         RecyclerView rv = new RecyclerView(ctx);
         rv.setLayoutManager(new LinearLayoutManager(ctx));
-        rv.setAdapter(new Adapter(ctx, new ArrayList<>(files)));
+        rv.setAdapter(new Adapter(ctx, new ArrayList<>(files), saveListener));
 
         new AlertDialog.Builder(ctx)
                 .setTitle(title + " (" + files.size() + ")")
@@ -43,11 +50,13 @@ public class DatacapFileListDialog
     {
         private final Context ctx;
         private final List<DatacapFile> items;
+        private final SaveRequestListener saveListener;
 
-        Adapter(Context ctx, List<DatacapFile> items)
+        Adapter(Context ctx, List<DatacapFile> items, SaveRequestListener saveListener)
         {
             this.ctx = ctx;
             this.items = items;
+            this.saveListener = saveListener;
         }
 
         @NonNull
@@ -68,6 +77,9 @@ public class DatacapFileListDialog
                     f.getName(), item.isActive(), item.isDeletable(), humanSize(f.length())));
 
             holder.shareButton.setOnClickListener(v -> share(item));
+
+            // Save delegates to the Activity, which owns the SAF "create document" launcher.
+            holder.saveButton.setOnClickListener(v -> saveListener.onSaveRequested(item));
 
             holder.deleteButton.setOnClickListener(v ->
             {
@@ -138,6 +150,7 @@ public class DatacapFileListDialog
         {
             final TextView info;
             final Button shareButton;
+            final Button saveButton;
             final Button deleteButton;
 
             VH(@NonNull View itemView)
@@ -145,6 +158,7 @@ public class DatacapFileListDialog
                 super(itemView);
                 info = itemView.findViewById(R.id.fileInfo);
                 shareButton = itemView.findViewById(R.id.shareButton);
+                saveButton = itemView.findViewById(R.id.saveButton);
                 deleteButton = itemView.findViewById(R.id.deleteButton);
             }
         }

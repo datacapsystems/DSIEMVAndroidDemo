@@ -37,5 +37,6 @@
     <string name="get_log_files">Get Log Files</string>
     <string name="get_db_files">Get DB Files</string>
     <string name="share">Share</string>
+    <string name="save">Save</string>
     <string name="delete">Delete</string>
 </resources>
