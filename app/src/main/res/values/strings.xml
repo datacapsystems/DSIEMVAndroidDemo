@@ -34,4 +34,8 @@
     <string name="uselastcardhint">UseLastCardID</string>
     <string name="softposuserid">SoftPOS User ID</string>
     <string name="collectcarddata">Collect Card Data</string>
+    <string name="get_log_files">Get Log Files</string>
+    <string name="get_db_files">Get DB Files</string>
+    <string name="share">Share</string>
+    <string name="delete">Delete</string>
 </resources>
