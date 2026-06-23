@@ -65,6 +65,8 @@ import static com.example.dsiemvandroiddemo.R.id.PadPorttext;
 import static com.example.dsiemvandroiddemo.R.id.nameOfDeviceText;
 import static com.example.dsiemvandroiddemo.R.id.softPosUserIdText;
 import static com.example.dsiemvandroiddemo.R.id.collectCardButton;
+import static com.example.dsiemvandroiddemo.R.id.getLogFilesButton;
+import static com.example.dsiemvandroiddemo.R.id.getDBFilesButton;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -420,6 +422,48 @@ public class MainActivity extends AppCompatActivity
         viewPager.post(() ->
         {
             findViewById(collectCardButton).setOnClickListener((v) -> CollectCardData());
+        });
+
+        viewPager.post(() ->
+        {
+            findViewById(getLogFilesButton).setOnClickListener((v) ->
+                executor.submit(() ->
+                {
+                    java.util.List<com.datacap.android.DatacapFile> files =
+                            dsiEMVAndroidinstance.getInstance(MainActivity.this).GetLogFiles();
+                    handler.post(() ->
+                    {
+                        if (files.isEmpty())
+                        {
+                            Toast.makeText(MainActivity.this, "No log files found", Toast.LENGTH_SHORT).show();
+                        }
+                        else
+                        {
+                            DatacapFileListDialog.show(MainActivity.this, "Log Files", files);
+                        }
+                    });
+                }));
+        });
+
+        viewPager.post(() ->
+        {
+            findViewById(getDBFilesButton).setOnClickListener((v) ->
+                executor.submit(() ->
+                {
+                    java.util.List<com.datacap.android.DatacapFile> files =
+                            dsiEMVAndroidinstance.getInstance(MainActivity.this).GetDBFiles();
+                    handler.post(() ->
+                    {
+                        if (files.isEmpty())
+                        {
+                            Toast.makeText(MainActivity.this, "No DB files found", Toast.LENGTH_SHORT).show();
+                        }
+                        else
+                        {
+                            DatacapFileListDialog.show(MainActivity.this, "DB Files", files);
+                        }
+                    });
+                }));
         });
 
         viewPager.post(() ->
