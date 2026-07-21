@@ -135,6 +135,9 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Bind the SDK to this Activity instance. Must happen in onCreate():
+        dsiEMVAndroidinstance.getInstance(this).setActivity(this);
+
         ViewPager2 viewPager = findViewById(R.id.optionPager);
         CardPagerAdapter adapter = new CardPagerAdapter(this);
         viewPager.setAdapter(adapter);
@@ -510,7 +513,11 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onDestroy() {
-        dsiEMVAndroidinstance.getInstance(MainActivity.this).clearActivity();
+        // Only clear when destroyed for good.
+        if (isFinishing())
+        {
+            dsiEMVAndroidinstance.getInstance(this).clearActivity();
+        }
         super.onDestroy();
     }
     public void onRadioButtonClicked(View view)
