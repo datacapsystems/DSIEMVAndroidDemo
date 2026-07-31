@@ -18,7 +18,9 @@ public class dsiEMVAndroidinstance
             {
                 if(instance == null)
                 {
-                    instance = new dsiEMVAndroid(context);
+                    // Use the application context. Current Activity is supplied via setActivity() in
+                    // MainActivity.onResume().
+                    instance = new dsiEMVAndroid(context.getApplicationContext());
                 }
 
             }

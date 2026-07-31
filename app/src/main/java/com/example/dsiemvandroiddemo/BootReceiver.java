@@ -24,7 +24,11 @@ public class BootReceiver extends BroadcastReceiver
                 || action.equals("paydroid.intent.action.BOOT_COMPLETED"))
         {
             Intent activityIntent = new Intent(context, MainActivity.class);
-            activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            // SINGLE_TOP prevents stacking a second MainActivity on top of one the
+            // launcher just created; multiple instances can break delivery or suretap responses.
+            activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    | Intent.FLAG_ACTIVITY_NO_ANIMATION);
             context.startActivity(activityIntent);
             LOGGER.info("Did app come to the foreground?");
         }
