@@ -23,6 +23,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
@@ -102,6 +103,15 @@ public class MainActivity extends AppCompatActivity
 
     private static final Map<String, String> padMap;
     private static final int REQUEST_PERMISSIONS = 2;
+
+    // Window-level dimming: only affects this window while it is in the foreground;
+    // the device's system brightness setting is never modified.
+    // Value is a fraction of the panel's MAX hardware brightness (linear scale),
+    // not of the user's current setting - keep it near zero so it always dims.
+    private static final float DIM_BRIGHTNESS = 0.01f;
+    private static final long DIM_TIMEOUT_MS = 60000;
+    private final Handler dimHandler = new Handler(Looper.getMainLooper());
+    private final Runnable dimRunnable = () -> setWindowBrightness(DIM_BRIGHTNESS);
 
     static
     {
@@ -509,6 +519,42 @@ public class MainActivity extends AppCompatActivity
         TextView ipView = findViewById(R.id.ipText);
         ipView.setText(String.format("%s%s", getString(R.string.ip_address_of_this_device), ipOfPhone));
 
+    }
+
+    private void setWindowBrightness(float brightness)
+    {
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.screenBrightness = brightness;
+        getWindow().setAttributes(lp);
+    }
+
+    private void restartDimTimer()
+    {
+        dimHandler.removeCallbacks(dimRunnable);
+        setWindowBrightness(WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE);
+        dimHandler.postDelayed(dimRunnable, DIM_TIMEOUT_MS);
+    }
+
+    @Override
+    public void onUserInteraction()
+    {
+        super.onUserInteraction();
+        restartDimTimer();
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+        restartDimTimer();
+    }
+
+    @Override
+    protected void onPause()
+    {
+        dimHandler.removeCallbacks(dimRunnable);
+        setWindowBrightness(WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE);
+        super.onPause();
     }
 
     @Override
