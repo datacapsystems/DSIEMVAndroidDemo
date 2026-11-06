@@ -166,13 +166,29 @@ public class LocalListenerService extends Service
                     session.getInputStream( ).read( Latin1RequestArray );
                     String UTF8RequestMsg = new String( Latin1RequestArray, StandardCharsets.ISO_8859_1 );
 
-                    if ( !UTF8RequestMsg.contains( "TransactionCancel" ) )
+                    //Route on the request PATH, not the body. CollectCardData is a dedicated control method (not a ProcessTransaction TranCode),
+                    //so a POST to /collectcarddata is dispatched to it; everything else stays on the ProcessTransaction path it always used.
+                    if ( uri != null && uri.toLowerCase().contains( "collectcarddata" ) )
                     {
-                        returnMSG = dsiEMVAndroidinstance.processTransaction( context, UTF8RequestMsg );
+                        //CollectCardData returns its RStream response synchronously, just like ProcessTransaction.
+                        returnMSG = dsiEMVAndroidinstance.getInstance(context).CollectCardData( UTF8RequestMsg );
+                    }
+                    else if ( UTF8RequestMsg.contains( "TransactionCancel" ) )
+                    {
+                        dsiEMVAndroidinstance.getInstance(context).CancelRequest();
+                    }
+                    else if ( UTF8RequestMsg.contains( "GetDevicesInfo" ) )
+                    {
+                        // GetDevicesInfo is not a TranCode ProcessTransaction understands -- the library only
+                        // exposes its supported-device list as a direct call (asking ProcessTransaction yields
+                        // DSIXReturnCode 003465 "Failed to get server endpoint"). Answering it here lets a POS /
+                        // test tool pull the list over the same POST endpoint it already uses, with an
+                        // <Admin><TranCode>GetDevicesInfo</TranCode></Admin> body.
+                        returnMSG = dsiEMVAndroidinstance.getInstance(context).GetDevicesInfo();
                     }
                     else
                     {
-                        dsiEMVAndroidinstance.getInstance(context).CancelRequest();
+                        returnMSG = dsiEMVAndroidinstance.processTransaction( context, UTF8RequestMsg );
                     }
 
                 } catch (Exception ex) {

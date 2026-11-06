@@ -106,6 +106,42 @@
                     android:layout_weight="5"
                     android:text="@string/padreset" />
 
+                <Button
+                    android:id="@+id/collectCardButton"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_weight="5"
+                    android:background="#00FFFFFF"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/collectcarddata"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                    android:textColor="#D61B5F" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                style="?android:attr/buttonBarStyle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:weightSum="10">
+
+                <Button
+                    android:id="@+id/getLogFilesButton"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="5"
+                    android:text="@string/get_log_files" />
+
+                <Button
+                    android:id="@+id/getDBFilesButton"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="5"
+                    android:text="@string/get_db_files" />
             </LinearLayout>
 
         </LinearLayout>
