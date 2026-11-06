@@ -166,13 +166,22 @@ public class LocalListenerService extends Service
                     session.getInputStream( ).read( Latin1RequestArray );
                     String UTF8RequestMsg = new String( Latin1RequestArray, StandardCharsets.ISO_8859_1 );
 
-                    if ( !UTF8RequestMsg.contains( "TransactionCancel" ) )
+                    if ( UTF8RequestMsg.contains( "TransactionCancel" ) )
                     {
-                        returnMSG = dsiEMVAndroidinstance.processTransaction( context, UTF8RequestMsg );
+                        dsiEMVAndroidinstance.getInstance(context).CancelRequest();
+                    }
+                    else if ( UTF8RequestMsg.contains( "GetDevicesInfo" ) )
+                    {
+                        // GetDevicesInfo is not a TranCode ProcessTransaction understands -- the library only
+                        // exposes its supported-device list as a direct call (asking ProcessTransaction yields
+                        // DSIXReturnCode 003465 "Failed to get server endpoint"). Answering it here lets a POS /
+                        // test tool pull the list over the same POST endpoint it already uses, with an
+                        // <Admin><TranCode>GetDevicesInfo</TranCode></Admin> body.
+                        returnMSG = dsiEMVAndroidinstance.getInstance(context).GetDevicesInfo();
                     }
                     else
                     {
-                        dsiEMVAndroidinstance.getInstance(context).CancelRequest();
+                        returnMSG = dsiEMVAndroidinstance.processTransaction( context, UTF8RequestMsg );
                     }
 
                 } catch (Exception ex) {
