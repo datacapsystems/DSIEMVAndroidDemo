@@ -74,8 +74,9 @@ DSIEMVAndroidInstance.getInstance(MainActivity.this).AddProcessTransactionRespon
 ```
 
 
+
 ### Local listener (port 8080)
-The app runs an HTTP listener as a foreground service (`LocalListenerService`). It accepts any `POST` and hands the body to `ProcessTransaction`, so a POS or test tool on the same network can drive the pad with ordinary TStream XML. Two bodies are special-cased on substring and never reach `ProcessTransaction`:
+The app runs an HTTP listener as a foreground service (`LocalListenerService`). It accepts any `POST` and hands the body to `ProcessTransaction`, so a POS or test tool on the same network can drive the pad with ordinary TStream XML. A `POST` to a path containing `collectcarddata` goes to `CollectCardData` instead, and two bodies are special-cased on substring and never reach `ProcessTransaction`:
 
 | Body contains | Listener does | Returns |
 |---|---|---|
