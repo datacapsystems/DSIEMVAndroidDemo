@@ -40,13 +40,22 @@ public class LocalListener extends NanoHTTPD {
                 session.getInputStream( ).read( Latin1RequestArray );
                 String UTF8RequestMsg = new String( Latin1RequestArray, StandardCharsets.ISO_8859_1 );
 
-                if ( !UTF8RequestMsg.contains( "TransactionCancel" ) )
+                if ( UTF8RequestMsg.contains( "TransactionCancel" ) )
                 {
-                    returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).ProcessTransaction( UTF8RequestMsg );
+                    dsiEMVAndroidinstance.getInstance(AppContext).CancelRequest();
+                }
+                else if ( UTF8RequestMsg.contains( "GetDevicesInfo" ) )
+                {
+                    // GetDevicesInfo is not a TranCode ProcessTransaction understands --
+                    // the library only exposes its supported-device list as a direct
+                    // call. Answering it here lets a POS / test tool pull the list over
+                    // the same POST endpoint it already uses, with an
+                    // <Admin><TranCode>GetDevicesInfo</TranCode></Admin> body.
+                    returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).GetDevicesInfo();
                 }
                 else
                 {
-                    dsiEMVAndroidinstance.getInstance(AppContext).CancelRequest();
+                    returnMSG = dsiEMVAndroidinstance.getInstance(AppContext).ProcessTransaction( UTF8RequestMsg );
                 }
 
             } catch (Exception ex) {

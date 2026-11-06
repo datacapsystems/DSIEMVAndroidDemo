@@ -73,6 +73,16 @@ DSIEMVAndroidInstance.getInstance(MainActivity.this).AddProcessTransactionRespon
 
 ```
 
+### Local listener (port 8080)
+The app runs its HTTP listener as a foreground service: the live dispatch is the nested `LocalListener` class inside `LocalListenerService.java` (the top-level `LocalListener.java` is the older activity-hosted copy, kept in step). It accepts any `POST` and hands the body to `ProcessTransaction`, so a POS or test tool on the same network can drive the pad with ordinary TStream XML. A `POST` to a path containing `collectcarddata` goes to `CollectCardData` instead, and two bodies are special-cased on substring and never reach `ProcessTransaction`:
+
+| Body contains | Listener does | Returns |
+|---|---|---|
+| `TransactionCancel` | `CancelRequest()` — cancels the in-flight transaction; must be sent on a second connection while the original `POST` is still open | empty body |
+| `GetDevicesInfo` | `GetDevicesInfo()` — the library's supported-device list, which is a direct call rather than a TranCode | `<Devices>` XML (`SecureDeviceID<n>` / `Description<n>` / `Interface<n>`) |
+
+A minimal device-list request is `<TStream><Admin><TranCode>GetDevicesInfo</TranCode></Admin></TStream>`.
+
 
 ### Report bugs
 If you encounter any bugs or issues with the latest version of dsiEMVAndroid, please report them to us by opening a [GitHub Issue](https://github.com/datacapsystems/DSIEMVAndroidDemo/issues)!
